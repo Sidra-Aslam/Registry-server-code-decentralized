@@ -18,5 +18,6 @@ pip install -r requirements.txt
 
 2. Run main file (main.py)
     ```
-    python main.py --port 8090
+    PEER1: python main.py --port 8091
+    PEER2: python main.py --port 8092
     ```

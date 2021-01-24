@@ -141,21 +141,26 @@ class Blockchain:
 
 class BlockchainManager:
     
-    def __init__(self, actor):
-        self.actor = actor
+    def __init__(self):
         self.blockchain = Blockchain()
 
     # this method will be called from initialize_components in main.py
     # if there is any available peer then chain parameter will contain the copy of blockchain
     # if there is no peer available then peer will have value as None so we will create genesis block
-    # TODO: this methold will be moved to main.py file
     def initialize(self, chain):
         if(chain is None):
+            print('There is no peer available, genesis block created.')
             self.blockchain.create_genesis_block()
         else:
-            for block in chain:
+            for block_data in chain:
+                block = Block(block_data["index"],
+                block_data["transactions"],
+                block_data["timestamp"],
+                block_data["previous_hash"],
+                block_data["nonce"])
+                block.hash=block.compute_hash()
                 self.blockchain.chain.append(block)
-
+                
     # function to find block on given index
     def findblock(self, index):
         index = int(index)
