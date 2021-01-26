@@ -5,13 +5,11 @@ import json
 import requests
 import threading
 from blockchain_manager import BlockchainManager
-from kademlia.network import Server
+from kademlia.network import Server, Node
 import asyncio
 from urllib.parse import urlparse
 
-
-# dht node
-dht_node = Server()
+dht_node=Server()
 
 # variable to store perrs list
 peer_list = set()
@@ -95,8 +93,8 @@ def initialize_blockchain():
     
     # initialize blockchain copy on blockhcain manager object 
     blockChainManager.initialize(chain_initializer)
-      
 
+dht_other_nodes=[]
 # main component initializer
 def initialize_components():
     register()
@@ -104,12 +102,10 @@ def initialize_components():
 
 # start dht node
 # this will be conntected with the first dht node 
-def start_dht_node():
-    # global variable to store current dht node
+async def start_dht_node():
     global dht_node
-    
-    # variable to store existing dht nodes
-    dht_other_nodes = []
+    # variable to store first dht node address and other node addresses
+    dht_other_nodes = [("127.0.0.1", 8081)]
     # iterate all available peers
     for peer in peer_list:
         # 'http://localhost:8092'
@@ -117,46 +113,23 @@ def start_dht_node():
             endpoint = urlparse(peer)
             # append dht host and port number of other node to dht_other_nodes variable
             dht_other_nodes.append((endpoint.hostname, endpoint.port+1))
-
-    # to display kademlia log information in console
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
+    # to display log information
     log = logging.getLogger('kademlia')
-    log.addHandler(handler)
     log.setLevel(logging.DEBUG)
+    log.addHandler(logging.StreamHandler())
 
-    # create loop on which current dht node will be running
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.set_debug(True)
     # start listening current node on network
-    loop.run_until_complete(dht_node.listen(port+1))
+    await dht_node.listen(port+1, interface='127.0.0.1')
 
     # if there is any existing dht node then connect current node to all other nodes
-    if(len(dht_other_nodes)>0):
-        loop.run_until_complete(dht_node.bootstrap(dht_other_nodes))
+    if(len(dht_other_nodes) > 0):
+        await dht_node.bootstrap(dht_other_nodes)
     else:
         print('DHT first node started')
-    
-    try:
-        # run loop all the time
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        dht_node.stop()
-        loop.close()
-    
-    
-    # i.e usage
-    # this value will be available on all the nodes connected
-    
-    
-
+   
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=8098, type=int, help='port to listen on')
+    parser.add_argument('-p', '--port', default=8092, type=int, help='port to listen on')
     args = parser.parse_args()
     port = args.port
     
@@ -165,18 +138,19 @@ if __name__ == '__main__':
     print("Registry Server Url: "+registry_server)
 
     # start new process for flask http api
-    flaskProcess = threading.Thread(target=app.run, kwargs={'host':'0.0.0.0', 'port': port, 'debug': False})
+    flaskProcess = threading.Thread(target=app.run, kwargs={'host':'127.0.0.1', 'port': port, 'debug': False})
     # flaskProcess.daemon = True
     flaskProcess.start()
     
     initialize_components()
-
-
-    # start new process for flask http api
-    dhtThread = threading.Thread(target=start_dht_node)
-    # dhtThread.daemon = True
-    dhtThread.start()
     
-    # start dht node
-    # asyncio.run(start_dht_node())
+    # for testing
+    # get the value associated with "my-key" from the network
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(start_dht_node())
+    # set value on dht node
+    loop.run_until_complete(dht_node.set('pointer1', 'value 1'))
+    # get value from dht node
+    res = loop.run_until_complete(dht_node.get('pointer1'))
+    print(res)
     
