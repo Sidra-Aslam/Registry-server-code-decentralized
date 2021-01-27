@@ -2,6 +2,7 @@ from hashlib import sha256
 import json
 import time
 from datetime import datetime
+import requests
 # class to define block propertities
 class Block:
     def __init__(self, index, transactions, timestamp, previous_hash, nonce=0):
@@ -141,7 +142,8 @@ class Blockchain:
 
 class BlockchainManager:
     
-    def __init__(self):
+    def __init__(self, peers):
+        self.peers = peers
         self.blockchain = Blockchain()
 
     # this method will be called from initialize_components in main.py
@@ -182,3 +184,67 @@ class BlockchainManager:
         # create json string
         jsonStr = json.dumps(dataObj)
         self.blockchain.add_new_transaction(jsonStr)
+
+    # check all peers that are currently active
+    def consensus(self):
+        """
+        Our naive consnsus algorithm. If a longer valid chain is
+        found, our chain is replaced with it.
+        """
+        longest_chain = None
+        current_len = len(self.blockchain.chain)
+        # not responding peers to remove
+        remove_peers = []
+        for peer in self.peers:
+            try:
+                response = requests.get(peer+'/chain')
+                chain = response.json()
+                length = len(chain)
+                if length > current_len and self.blockchain.check_chain_validity(chain):
+                    current_len = length
+                    longest_chain = chain
+            except:
+                remove_peers.append(peer)
+        
+        # remove not responding peers from main list
+        for peer in remove_peers:
+            self.peers.remove(peer)
+        
+        if longest_chain:
+            self.initialize(longest_chain)
+            return True
+
+        return False
+
+    def mine_unconfirmed_transactions(self):
+        result = self.blockchain.mine()
+        if not result:
+            return "No transactions to mine"
+        else:
+            # Making sure we have the longest chain before announcing to the network
+            chain_length = len(self.blockchain.chain)
+            self.consensus()
+            print('consensus method called')
+            if chain_length == len(self.blockchain.chain):
+                # announce the recently mined block to the network
+                self.announce_new_block(self.blockchain.last_block)
+                print("Block #{} is announced to network.".format(self.blockchain.last_block.index))
+            return "Block #{} is mined.".format(self.blockchain.last_block.index)
+
+    # replicate block to all active peers
+    def announce_new_block(self, block):
+        """
+        A function to announce to the network once a block has been mined.
+        Other blocks can simply verify the proof of work and add it to their
+        respective chains.
+        """
+        for peer in self.peers:
+            url = peer+"/add_block"
+            try:
+                headers = {'Content-Type': "application/json"}
+                requests.post(url,
+                            data=json.dumps(block.__dict__, sort_keys=True),
+                            headers=headers)
+                print(url+' -> block added')
+            except:
+                print(url+' -> block failed')
