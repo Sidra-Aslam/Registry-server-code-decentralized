@@ -191,7 +191,7 @@ class BlockchainManager:
         Our naive consnsus algorithm. If a longer valid chain is
         found, our chain is replaced with it.
         """
-        longest_chain = None
+        longest_chain = None 
         current_len = len(self.blockchain.chain)
         # not responding peers to remove
         remove_peers = []

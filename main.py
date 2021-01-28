@@ -10,6 +10,7 @@ from kademlia.network import Server, Node
 import asyncio
 from urllib.parse import urlparse
 from time import sleep
+import hashlib
 import uuid
 
 # variable to store perrs list
@@ -252,11 +253,18 @@ def woodcutting_data_input(block=None):
     else:
         update_data(data, block)
 
+# generate hash from data
+def generate_hash(data):
+    if not isinstance(data, bytes):
+        string = str(data).encode('utf8')
+    return hashlib.sha256(string).digest().hex()
+
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
 def create_data(data, user_id, privacy_type):
-    pointer = str(uuid.uuid4())
+    # return hash of data
+    pointer = generate_hash(data) 
     data = json.dumps(data)
 
     # store data on dht node

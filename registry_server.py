@@ -5,7 +5,7 @@ import requests
 import threading
 import logging
 import asyncio
-from kademlia.network import Server
+#from kademlia.network import Server
 
 # create flask app object
 app = Flask(__name__)
