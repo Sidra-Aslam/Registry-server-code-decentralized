@@ -1,4 +1,3 @@
-import logging
 from flask import Flask, request, jsonify
 from argparse import ArgumentParser
 import json
@@ -6,7 +5,8 @@ import requests
 import threading
 from blockchain_manager import BlockchainManager, Block
 from dht_manager import DhtManager
-from kademlia.network import Server, Node
+from kademlia.utils import digest
+
 import asyncio
 from urllib.parse import urlparse
 from time import sleep
@@ -133,48 +133,6 @@ def initialize_components():
     register()
     initialize_blockchain()
 
-# start dht node for current client
-def start_dht_node():
-    global dht_manager
-
-    # variable to store other node addresses
-    dht_other_nodes = []
-    # iterate all available peers
-    for peer in peer_list:
-        endpoint = urlparse(peer)
-        # append dht host and port number of other node to dht_other_nodes variable
-        dht_other_nodes.append((endpoint.hostname, endpoint.port+1))
-
-    # to display log information
-    log = logging.getLogger('kademlia')
-    log.setLevel(logging.DEBUG)
-    log.addHandler(logging.StreamHandler())
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.set_debug(True)
-
-    # create dht node object
-    dht_node = Server()
-    # start node on port + 1
-    loop.run_until_complete(dht_node.listen(port+1))
-
-    # create dht manager object for current node
-    dht_manager = DhtManager(my_dht_node_endpoint)
-
-    # if there is any existing dht node then connect current node to all other nodes
-    if(len(dht_other_nodes) > 0):
-        # connect with other dht nodes
-        loop.run_until_complete(dht_node.bootstrap(dht_other_nodes))
-    
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        dht_node.stop()
-        loop.close()
-
 # data input function for transport actor
 def transport_data_input(block=None):
     # tranpsort actor data object to hold private data
@@ -253,22 +211,23 @@ def woodcutting_data_input(block=None):
     else:
         update_data(data, block)
 
-# generate hash from data
-def generate_hash(data):
-    if not isinstance(data, bytes):
-        string = str(data).encode('utf8')
-    return hashlib.sha256(string).digest().hex()
+# # generate hash from data
+# def generate_hash(data):
+#     if not isinstance(data, bytes):
+#         string = str(data).encode('utf8')
+#     return hashlib.sha256(string).digest().hex()
 
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
 def create_data(data, user_id, privacy_type):
-    # return hash of data
-    pointer = generate_hash(data) 
+ # generate hash b using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
+    pointer = digest(data).hex()
+
     data = json.dumps(data)
 
     # store data on dht node
-    asyncio.run(dht_manager.set_value(pointer, data))
+    dht_manager.set_value(pointer, data)
     
     # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
     blockChainManager.new_transaction(pointer, user_id, privacy_type)
@@ -289,7 +248,7 @@ def read_data():
         # extract pointer from block object
         pointer = json.loads(block.transactions[0])['data']
         # retrieve data from dht against provided pointer
-        dht_data = asyncio.run(dht_manager.get_value(pointer))
+        dht_data = dht_manager.get_value(pointer)
         print(dht_data)
     else:
         print('block not found')
@@ -389,9 +348,11 @@ if __name__ == '__main__':
     apiThread.start()
     
     initialize_components()
-    
-    # start new thread for dht node
-    dhtThread = threading.Thread(target=start_dht_node)
+  # object of dht_manager. It will start the dht node
+    dht_manager = DhtManager(port+1, peer_list)
+
+    # start new thread for dht node to continusly listen
+    dhtThread = threading.Thread(target=dht_manager.start_node)
     dhtThread.daemon=True
     dhtThread.start()
     # wait for at least four seconds till api and dht node get started 

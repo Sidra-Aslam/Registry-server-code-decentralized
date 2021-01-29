@@ -5,3 +5,4 @@ flask
 requests
 cryptography
 argparse
+nest_asyncio

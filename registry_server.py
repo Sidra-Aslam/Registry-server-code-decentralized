@@ -5,7 +5,6 @@ import requests
 import threading
 import logging
 import asyncio
-#from kademlia.network import Server
 
 # create flask app object
 app = Flask(__name__)
@@ -29,7 +28,6 @@ def peers():
         if client_address not in peer_list:
             # register new peer/client on registry server
             peer_list.add(client_address)
-
 
             # iterate all existing peers to acknowledge new client
             for peer in peer_list:
