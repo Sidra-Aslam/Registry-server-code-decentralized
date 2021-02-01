@@ -22,14 +22,14 @@ class DhtManager:
             # append dht host and port number of other node to dht_other_nodes variable
             dht_other_nodes.append((endpoint.hostname, endpoint.port+1))
 
-        # to display log information
-        log = logging.getLogger('kademlia')
-        log.setLevel(logging.DEBUG)
-        log.addHandler(logging.StreamHandler())
-
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-        self.loop.set_debug(True)
+        # # to display log information
+        # log = logging.getLogger('kademlia')
+        # log.setLevel(logging.DEBUG)
+        # log.addHandler(logging.StreamHandler())
+        
+        self.loop = asyncio.get_event_loop()
+        # asyncio.set_event_loop(self.loop)
+        # self.loop.set_debug(True)
 
         # create dht node object
         self.dht_node = Server()
@@ -40,10 +40,6 @@ class DhtManager:
         if(len(dht_other_nodes) > 0):
             # connect with other dht nodes
             self.loop.run_until_complete(self.dht_node.bootstrap(dht_other_nodes))
-        # else:
-        #     subprocess.call('start python dht_first_node.py', shell=True)
-        #     sleep(2)
-        #     self.loop.run_until_complete(self.dht_node.bootstrap([('127.0.0.1', 1111)]))
 
     # method for main thread to continue running the node
     def start_node(self):

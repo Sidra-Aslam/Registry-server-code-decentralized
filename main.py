@@ -133,8 +133,8 @@ def initialize_components():
     register()
     initialize_blockchain()
 
-# data input function for transport actor
-def transport_data_input(block=None):
+# data input function for transporter actor
+def transporter_data_input(block=None):
     # tranpsort actor data object to hold private data
     private_data = {'UserId': '', 'ProductId': '', 'PickupPlace': ''}
     # tranpsort actor data object to hold sensitive data
@@ -174,13 +174,13 @@ def transport_data_input(block=None):
     else:
         update_data(data, block)
 
-# data input function for woodcutting actor
-def woodcutting_data_input(block=None):
-    # woodcutting object to hold private data
+# data input function for wood_cutter actor
+def wood_cutter_data_input(block=None):
+    # wood_cutter object to hold private data
     private_data = {'UserId': '', 'ProductId': '', 'Location': '', }
-    # woodcutting object to hold sensitive data
+    # wood_cutter object to hold sensitive data
     sensitive_data = {'DateOfCutting': ''}
-    # woodcutting object to hold public data
+    # wood_cutter object to hold public data
     public_data = {'WoodType': ''}
     
     # take private data from actor
@@ -198,6 +198,156 @@ def woodcutting_data_input(block=None):
     # take other data from actor
     while len(public_data['WoodType']) == 0:
         public_data['WoodType'] = input("Wood Type: ")
+    
+    # create data object
+    data = {
+        'private': private_data,
+        'sensitive': sensitive_data,
+        'public': public_data
+    }
+
+    if(block is None):
+        create_data(data, private_data['UserId'], 'private-data')
+    else:
+        update_data(data, block)
+
+# data input function for warehouse_storage actor
+def warehouse_storage_data_input(block=None):
+    # wood_cutter object to hold private data
+    private_data = {'UserId': '', 'ProductId': '', 'ProductStorageLocation': '', 'ProcessedDateTime':'', }
+    # wood_cutter object to hold sensitive data
+    sensitive_data = {'FreeStorageSpace': '', 'Quantity':''}
+    # wood_cutter object to hold public data
+    public_data = {'Processed': ''}
+    
+    # take private data from actor
+    while len(private_data['UserId']) == 0:
+        private_data['UserId'] = input("User Id: ")
+    while len(private_data['ProductId']) == 0:
+        private_data['ProductId'] = input("Product Id: ")
+    while len(private_data['ProductStorageLocation']) == 0:
+        private_data['ProductStorageLocation'] = input("Product storage location: ")
+    while len(private_data['ProcessedDateTime']) == 0:
+        private_data['ProcessedDateTime'] = input("Processed date and time: ")
+    
+    # take private data from actor
+    while len(sensitive_data['FreeStorageSpace']) == 0:
+        sensitive_data['FreeStorageSpace'] = input("Free storage space: ")
+    while len(sensitive_data['Quantity']) == 0:
+        sensitive_data['Quantity'] = input("Quantity: ")
+    
+    # take other data from actor
+    while len(public_data['Processed']) == 0:
+        public_data['Processed'] = input("Processed (Yes/No): ")
+    
+    # create data object
+    data = {
+        'private': private_data,
+        'sensitive': sensitive_data,
+        'public': public_data
+    }
+
+    if(block is None):
+        create_data(data, private_data['UserId'], 'private-data')
+    else:
+        update_data(data, block)
+
+# data input function for furniture_assembly actor
+def furniture_assembly_data_input(block=None):
+    # wood_cutter object to hold private data
+    private_data = {'UserId': '', 'FurnitureId': ''}
+    # wood_cutter object to hold sensitive data
+    sensitive_data = {'NumberOfPieces': '', 'FurnitureDesign':'' }
+    # wood_cutter object to hold public data
+    public_data = {'FurnitureName': ''}
+    
+    # take private data from actor
+    while len(private_data['UserId']) == 0:
+        private_data['UserId'] = input("User Id: ")
+    while len(private_data['FurnitureId']) == 0:
+        private_data['FurnitureId'] = input("Furniture Id: ")
+    
+    # take private data from actor
+    while len(sensitive_data['NumberOfPieces']) == 0:
+        sensitive_data['NumberOfPieces'] = input("Number of pieces (3 furniture sets): ")
+    while len(sensitive_data['FurnitureDesign']) == 0:
+        sensitive_data['FurnitureDesign'] = input("Furniture Design: ")
+    
+    # take other data from actor
+    while len(public_data['FurnitureName']) == 0:
+        public_data['FurnitureName'] = input("Furniture Name: ")
+    
+    # create data object
+    data = {
+        'private': private_data,
+        'sensitive': sensitive_data,
+        'public': public_data
+    }
+
+    if(block is None):
+        create_data(data, private_data['UserId'], 'private-data')
+    else:
+        update_data(data, block)
+
+# data input function for furniture_assembly actor
+def furniture_shop_data_input(block=None):
+    # wood_cutter object to hold private data
+    private_data = {'UserId': ''}
+    # wood_cutter object to hold sensitive data
+    sensitive_data = {'FurnitureShopLocation': '', 'PurchasedDateAndTime':'' }
+    # wood_cutter object to hold public data
+    public_data = {'FurnitureQuality': ''}
+    
+    # take private data from actor
+    while len(private_data['UserId']) == 0:
+        private_data['UserId'] = input("User Id: ")
+    
+    # take private data from actor
+    while len(sensitive_data['FurnitureShopLocation']) == 0:
+        sensitive_data['FurnitureShopLocation'] = input("Furniture shop location: ")
+    while len(sensitive_data['PurchasedDateAndTime']) == 0:
+        sensitive_data['PurchasedDateAndTime'] = input("Purchased date and time: ")
+    
+    # take other data from actor
+    while len(public_data['FurnitureQuality']) == 0:
+        public_data['FurnitureQuality'] = input("Furniture quality: ")
+    
+    # create data object
+    data = {
+        'private': private_data,
+        'sensitive': sensitive_data,
+        'public': public_data
+    }
+
+    if(block is None):
+        create_data(data, private_data['UserId'], 'private-data')
+    else:
+        update_data(data, block)
+
+# data input function for customer actor
+def customer_data_input(block=None):
+    # wood_cutter object to hold private data
+    private_data = {'UserId': '', 'ProductId': '', 'PaymentDetails': '', }
+    # wood_cutter object to hold sensitive data
+    sensitive_data = {'PurchasedDateAndTime': '', 'PurchasedQuantity':'', 'Style':''}
+    # wood_cutter object to hold public data
+    public_data = {}
+    
+    # take private data from actor
+    while len(private_data['UserId']) == 0:
+        private_data['UserId'] = input("User Id: ")
+    while len(private_data['ProductId']) == 0:
+        private_data['ProductId'] = input("Product Id: ")
+    while len(private_data['PaymentDetails']) == 0:
+        private_data['PaymentDetails'] = input("Payment details: ")
+    
+    # take private data from actor
+    while len(sensitive_data['PurchasedDateAndTime']) == 0:
+        sensitive_data['PurchasedDateAndTime'] = input("Purchased date and time: ")
+    while len(sensitive_data['PurchasedQuantity']) == 0:
+        sensitive_data['PurchasedQuantity'] = input("Purchased quantity: ")
+    while len(sensitive_data['Style']) == 0:
+        sensitive_data['Style'] = input("Style: ")
     
     # create data object
     data = {
@@ -286,11 +436,18 @@ def display_menu():
         if choice == '1':
             # create data
             # display menu based on actor name
-            if(client_name == 'wood_cutting'):
-                woodcutting_data_input()
-            elif(client_name == 'transport'):
-                transport_data_input()
-
+            if(client_name == 'wood_cutter'):
+                wood_cutter_data_input()
+            elif(client_name == 'transporter'):
+                transporter_data_input()
+            elif(client_name == 'warehouse_storage'):
+                warehouse_storage_data_input()
+            elif(client_name == 'furniture_assembly'):
+                furniture_assembly_data_input()
+            elif(client_name == 'furniture_shop'):
+                furniture_shop_data_input()
+            elif(client_name == 'customer'):
+                customer_data_input()
             loop = True
         elif choice == '2':
             # read data
@@ -332,7 +489,7 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='wood_cutting', help='Enter client name')
+    parser.add_argument('-c', '--client', default='wood_cutter', help='Enter client name')
     args = parser.parse_args()
     port = args.port
     client_name = args.client
@@ -355,7 +512,8 @@ if __name__ == '__main__':
     dhtThread = threading.Thread(target=dht_manager.start_node)
     dhtThread.daemon=True
     dhtThread.start()
+    print('DHT node running on port: ' + str(dht_manager.port))
     # wait for at least four seconds till api and dht node get started 
-    sleep(4)
+    sleep(2)
     # display menu
     display_menu()
