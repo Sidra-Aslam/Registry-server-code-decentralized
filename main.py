@@ -4,6 +4,7 @@ import json
 import requests
 import threading
 from blockchain_manager import BlockchainManager, Block
+from encryption_manager import EncryptionManager
 from dht_manager import DhtManager
 from kademlia.utils import digest
 
@@ -17,6 +18,9 @@ import uuid
 peer_list = set()
 # blockchain manager object
 blockChainManager = None
+
+# encryption manager object
+encryptionManager = EncryptionManager()
 
 # name of current client
 client_name = None
@@ -37,6 +41,13 @@ my_dht_node_endpoint = None
 dht_manager = None
 # create flask app object
 app = Flask(__name__)
+
+# api to return public key
+# this will be called from any other client
+@app.route('/public_key', methods=['GET'])
+def public_key():
+    global encryptionManager
+    return encryptionManager.public_key
 
 # api to update whole peer list, this will be called by registry server
 @app.route('/peers', methods=['POST'])
@@ -88,7 +99,7 @@ def register():
     try:
         headers = {'Content-Type': "application/json"}
         req = requests.post(registry_server+ "/peers", data=json.dumps(
-            {"client_address": my_endpoint}), headers=headers)
+            {"client_address": my_endpoint, "client_name":client_name}), headers=headers)
         if(req.ok):
             print('Connected with registry server')
         else:
@@ -376,8 +387,11 @@ def create_data(data, user_id, privacy_type):
 
     data = json.dumps(data)
 
+    # encrypt data with public key
+    ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
     # store data on dht node
-    dht_manager.set_value(pointer, data)
+    dht_manager.set_value(pointer, ecrypted_data)
     
     # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
     blockChainManager.new_transaction(pointer, user_id, privacy_type)
@@ -399,12 +413,24 @@ def read_data():
         pointer = json.loads(block.transactions[0])['data']
         # retrieve data from dht against provided pointer
         dht_data = dht_manager.get_value(pointer)
-        print(dht_data)
+        # decrypt dht data with private key
+        decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
+        print(decrypted_data)
     else:
         print('block not found')
 
 def update_data(data, block):
-    pass
+    # extract pointer from existing block
+    pointer = json.loads(block.transactions[0])['data']
+
+    data = json.dumps(data)
+
+    # encrypt data with public key
+    ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+    # store data on dht node
+    dht_manager.set_value(pointer, ecrypted_data)
+    
+    print('data updated')
 
 def delete_data():
     pass
@@ -456,8 +482,31 @@ def display_menu():
             loop = True
         elif choice == '3':
             # update data
-            # TODO
-            pass
+            blockNo = ''
+            while len(blockNo) == 0:
+                blockNo = input("Please enter block number to update data: ")
+
+            # find block number to retrieve pointer
+            block = blockChainManager.findblock(blockNo)
+
+            # if block found then take new input from user to update data
+            if(block is not None):
+                if(client_name == 'wood_cutter'):
+                    wood_cutter_data_input(block)
+                elif(client_name == 'transporter'):
+                    transporter_data_input(block)
+                elif(client_name == 'warehouse_storage'):
+                    warehouse_storage_data_input(block)
+                elif(client_name == 'furniture_assembly'):
+                    furniture_assembly_data_input(block)
+                elif(client_name == 'furniture_shop'):
+                    furniture_shop_data_input(block)
+                elif(client_name == 'customer'):
+                    customer_data_input(block)
+            else:
+                print('Block not found')
+            loop = True
+
         elif choice == '4':
             # delete data
             # TODO
