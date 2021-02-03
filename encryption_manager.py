@@ -67,4 +67,4 @@ class EncryptionManager:
          return original_message
       except Exception as e:
          print(str(e))
-         return '{}'
+         return None

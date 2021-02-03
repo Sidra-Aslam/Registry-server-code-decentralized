@@ -400,7 +400,8 @@ def create_data(data, user_id, privacy_type):
     result = blockChainManager.mine_unconfirmed_transactions()
     print(result)
 
-# read data
+# read data 
+# this function will return block
 def read_data():
     blockNo = ''
     while len(blockNo) == 0:
@@ -408,16 +409,28 @@ def read_data():
     # find block
     block = blockChainManager.findblock(blockNo)
     if(block is not None):
-        print(block.__dict__)
+        # to print block pointer/information
+        # print(block.__dict__)
         # extract pointer from block object
         pointer = json.loads(block.transactions[0])['data']
         # retrieve data from dht against provided pointer
         dht_data = dht_manager.get_value(pointer)
-        # decrypt dht data with private key
-        decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
-        print(decrypted_data)
+        # check if dht_data is deleted then retun None
+        if(dht_data == 'DELETED'):
+            print('DHT data is deleted.')
+            return None
+        else:
+            # decrypt dht data with private key
+            decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
+            print(decrypted_data)
+            # return block if dht data is decrypted properly
+            if(decrypted_data is not None):
+                return block
+            else:
+                return None
     else:
         print('block not found')
+        return None
 
 def update_data(data, block):
     # extract pointer from existing block
@@ -432,8 +445,12 @@ def update_data(data, block):
     
     print('data updated')
 
-def delete_data():
-    pass
+def delete_data(block):
+    # extract pointer from existing block
+    pointer = json.loads(block.transactions[0])['data']
+    # 'DELETED' will identify that data is deleted
+    dht_manager.set_value(pointer, 'DELETED')
+    print('Data deleted on DHT.')
 
 def share_data():
     pass
@@ -482,12 +499,9 @@ def display_menu():
             loop = True
         elif choice == '3':
             # update data
-            blockNo = ''
-            while len(blockNo) == 0:
-                blockNo = input("Please enter block number to update data: ")
-
-            # find block number to retrieve pointer
-            block = blockChainManager.findblock(blockNo)
+            
+            # read block
+            block = read_data()
 
             # if block found then take new input from user to update data
             if(block is not None):
@@ -503,14 +517,18 @@ def display_menu():
                     furniture_shop_data_input(block)
                 elif(client_name == 'customer'):
                     customer_data_input(block)
-            else:
-                print('Block not found')
+            
             loop = True
 
         elif choice == '4':
             # delete data
-            # TODO
-            pass
+            # read block
+            block = read_data()
+
+            if(block is not None):
+                delete_data(block)
+                
+                loop = True
         elif choice == '5':
             # share data
             #TODO
@@ -538,7 +556,7 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='wood_cutter', help='Enter client name')
+    parser.add_argument('-c', '--client', default='customer', help='Enter client name')
     args = parser.parse_args()
     port = args.port
     client_name = args.client
