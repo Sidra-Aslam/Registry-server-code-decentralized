@@ -9,7 +9,7 @@ import asyncio
 # create flask app object
 app = Flask(__name__)
 # the address to other participating members of the network
-peer_list = set()
+peer_list = []
 
 # the peers resource
 @app.route('/peers', methods=['GET', 'POST'])
@@ -21,19 +21,20 @@ def peers():
     
     elif request.method == 'POST':
         remove_peers = []
-        # get address (api url) of new client from request
-        client_address = request.get_json()["client_address"]
+        # get address (api url) and client_name of new client from request
+        current_peer = request.get_json()
+        
         headers = {'Content-Type': "application/json"}
 
-       #if client is in the list it is a disconnect
-        if client_address in peer_list:
-            # register new peer/client on registry server
-            peer_list.remove(client_address)
+       #if client is already in the list then disconnect it. 
+        if current_peer in peer_list:
+            # remove peer from peer_list
+            peer_list.remove(current_peer)
             # iterate all existing peers to acknowledge new client
             for peer in peer_list:
                 try:
                     # send request to other peers to acknowledge new client
-                    requests.post(peer + "/peers", data=json.dumps(list(peer_list)), headers=headers)
+                    requests.post(peer['client_address'] + "/peers", data=json.dumps(list(peer_list)), headers=headers)
                 except:
                     # if there is any error in communication then remove that peer from the peers list
                     remove_peers.remove(peer)
@@ -46,13 +47,13 @@ def peers():
         # check if client address is not already in the peers list
         else:
             # register new peer/client on registry server
-            peer_list.add(client_address)
+            peer_list.append(current_peer)
 
             # iterate all existing peers to acknowledge new client
             for peer in peer_list:
                 try:
                     # send request to other peers to acknowledge new client
-                    requests.post(peer + "/peers", data=json.dumps(list(peer_list)), headers=headers)
+                    requests.post(peer['client_address'] + "/peers", data=json.dumps(list(peer_list)), headers=headers)
                 except:
                     # if there is any error in communication then remove that peer from the peers list
                     remove_peers.remove(peer)
