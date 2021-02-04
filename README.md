@@ -18,6 +18,6 @@ pip install -r requirements.txt
 
 2. Run main file (main.py)
     ```
-    PEER1: python main.py --port 8092 --client wood_cutting 
-    PEER2: python main.py --port 8090 --client transport
+    PEER1: python main.py --port 8060 --client wood_cutter --role owner
+    PEER2: python main.py --port 8062 --client transporter --role business_partner
     ```

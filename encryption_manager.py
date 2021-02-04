@@ -13,7 +13,8 @@ class EncryptionManager:
    public_key = None
    def __init__(self):
       # generate private key
-      pvt_key = rsa.generate_private_key(public_exponent=65537,key_size=2048,backend=default_backend())
+      pvt_key = rsa.generate_private_key(public_exponent=65537,key_size=4096,backend=default_backend())
+      
       # generate public key
       pub_key = pvt_key.public_key()
 
@@ -31,6 +32,7 @@ class EncryptionManager:
       ).hex()
       print('Private Key: '+self.private_key)
       print('Public Key: '+self.public_key)
+      
       
    def encrypt(self, data, pub_key):
       # convert data object to json string

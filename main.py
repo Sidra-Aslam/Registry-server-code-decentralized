@@ -5,6 +5,7 @@ import requests
 import threading
 from blockchain_manager import BlockchainManager, Block
 from encryption_manager import EncryptionManager
+from rbac_manager import RbacManager
 from dht_manager import DhtManager
 from kademlia.utils import digest
 
@@ -15,15 +16,21 @@ import hashlib
 import uuid
 
 # variable to store perrs list
-peer_list = set()
+peer_list = None
 # blockchain manager object
 blockChainManager = None
 
 # encryption manager object
 encryptionManager = EncryptionManager()
 
+# rbac manager object
+rbac = RbacManager()
+
 # name of current client
 client_name = None
+
+# name of current client
+client_role = None
 
 # port at which client api is running
 port = None
@@ -39,6 +46,7 @@ my_dht_node_endpoint = None
 
 # dht manage object to access current dht node
 dht_manager = None
+
 # create flask app object
 app = Flask(__name__)
 
@@ -54,8 +62,10 @@ def public_key():
 def peers():
     global peer_list
     global blockChainManager
-    peer_list = set(request.get_json())
-    peer_list.remove(my_endpoint)
+    peer_list = list(request.get_json())
+    # remove my endpoint from peer list
+    peer_list = [p for p in peer_list if p['client_address'] != my_endpoint]
+
     if(blockChainManager is not None):
         blockChainManager.peers = peer_list
     print('Peer list updated')
@@ -99,13 +109,13 @@ def register():
     try:
         headers = {'Content-Type': "application/json"}
         req = requests.post(registry_server+ "/peers", data=json.dumps(
-            {"client_address": my_endpoint, "client_name":client_name}), headers=headers)
+            {"client_address": my_endpoint, "client_name": client_name}), headers=headers)
         if(req.ok):
             print('Connected with registry server')
         else:
             print('Failed to connect with registry server.')
             exit()            
-    except Exception as e:
+    except:
         print('Failed to connect with registry server.')
         exit()
 
@@ -113,7 +123,7 @@ def register():
 def unregister():
     headers = {'Content-Type': "application/json"}
     requests.post(registry_server+ "/peers", data=json.dumps(
-        {"client_address": my_endpoint}), headers=headers)         
+        {"client_address": my_endpoint, "client_name": client_name}), headers=headers)         
 
 # initialize blockchain copy
 def initialize_blockchain():
@@ -123,19 +133,18 @@ def initialize_blockchain():
     chain_initializer = None
     headers = {'Content-Type': "application/json"}
     for peer in peer_list:
-        if peer != my_endpoint:
-            try:
-                response = requests.get(peer+ "/chain", headers=headers)
-                if(response.ok):
-                    # get blockchain copy in json format
-                    chain_initializer=response.json()
-                    print('blockchain copy received from ' + peer)
-                
-                # if BC copy received then do not try to receive block chain copy from other clients
-                break
-            except Exception as e:
-                print(peer+' not responding, trying next peer to fetch blockchain copy')
-    
+        try:
+            response = requests.get(peer['client_address']+ "/chain", headers=headers)
+            if(response.ok):
+                # get blockchain copy in json format
+                chain_initializer=response.json()
+                print('blockchain copy received from ' + peer['client_address'])
+            
+            # if BC copy received then do not try to receive block chain copy from other clients
+            break
+        except:
+            print(peer['client_address']+' not responding, trying next peer to fetch blockchain copy')
+
     # initialize blockchain copy on blockhcain manager object 
     blockChainManager.initialize(chain_initializer)
 
@@ -457,7 +466,7 @@ def share_data():
 
 def display_menu():
     def print_menu():
-        print(30 * "-", client_name, 30 * "-")
+        print(30 * "-", client_name, " - ", client_role, 30 * "-")
         print("1. Create data ")
         print("2. Read data ")
         print("3. Update data ")
@@ -557,9 +566,17 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
     parser.add_argument('-c', '--client', default='customer', help='Enter client name')
+    parser.add_argument('-r', '--role', default='owner', help='Enter role name')
+    
     args = parser.parse_args()
     port = args.port
     client_name = args.client
+    client_role = args.role
+    
+    # authenticate client name and role using rabac manager
+    if(not rbac.authenticate(client_name, client_role)):
+        print('Not authenticated.')
+        exit()
 
     registry_server = "http://127.0.0.1:8080/"
     my_endpoint = "http://127.0.0.1:"+str(port)

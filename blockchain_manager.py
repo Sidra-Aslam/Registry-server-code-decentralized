@@ -143,7 +143,7 @@ class Blockchain:
 class BlockchainManager:
     
     def __init__(self, peers):
-        self.peers = peers
+        self.peers = list(peers)
         self.blockchain = Blockchain()
 
     # this method will be called from initialize_components in main.py
@@ -197,7 +197,7 @@ class BlockchainManager:
         remove_peers = []
         for peer in self.peers:
             try:
-                response = requests.get(peer+'/chain')
+                response = requests.get(peer['client_address']+'/chain')
                 chain = response.json()
                 length = len(chain)
                 if length > current_len and self.blockchain.check_chain_validity(chain):
@@ -239,7 +239,7 @@ class BlockchainManager:
         respective chains.
         """
         for peer in self.peers:
-            url = peer+"/add_block"
+            url = peer['client_address']+"/add_block"
             try:
                 headers = {'Content-Type': "application/json"}
                 requests.post(url,
