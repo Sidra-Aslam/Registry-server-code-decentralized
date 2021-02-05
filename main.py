@@ -487,56 +487,70 @@ def display_menu():
 
         if choice == '1':
             # create data
-            # display menu based on actor name
-            if(client_name == 'wood_cutter'):
-                wood_cutter_data_input()
-            elif(client_name == 'transporter'):
-                transporter_data_input()
-            elif(client_name == 'warehouse_storage'):
-                warehouse_storage_data_input()
-            elif(client_name == 'furniture_assembly'):
-                furniture_assembly_data_input()
-            elif(client_name == 'furniture_shop'):
-                furniture_shop_data_input()
-            elif(client_name == 'customer'):
-                customer_data_input()
+            # verify permission
+            if(rbac.verify_permission(client_role, 'write', 'blockchain')):
+                # display menu based on actor name
+                if(client_name == 'wood_cutter'):
+                    wood_cutter_data_input()
+                elif(client_name == 'transporter'):
+                    transporter_data_input()
+                elif(client_name == 'warehouse_storage'):
+                    warehouse_storage_data_input()
+                elif(client_name == 'furniture_assembly'):
+                    furniture_assembly_data_input()
+                elif(client_name == 'furniture_shop'):
+                    furniture_shop_data_input()
+                elif(client_name == 'customer'):
+                    customer_data_input()    
+            else:
+                print('You are not authorized to perform this action.')
+            
             loop = True
         elif choice == '2':
             # read data
-            read_data()
-
+             # verify permission
+            if(rbac.verify_permission(client_role, 'read', 'blockchain')):
+                read_data()
+            else:
+                print('You are not authorized to perform this action.')
+            
             loop = True
         elif choice == '3':
             # update data
-            
-            # read block
-            block = read_data()
-
-            # if block found then take new input from user to update data
-            if(block is not None):
-                if(client_name == 'wood_cutter'):
-                    wood_cutter_data_input(block)
-                elif(client_name == 'transporter'):
-                    transporter_data_input(block)
-                elif(client_name == 'warehouse_storage'):
-                    warehouse_storage_data_input(block)
-                elif(client_name == 'furniture_assembly'):
-                    furniture_assembly_data_input(block)
-                elif(client_name == 'furniture_shop'):
-                    furniture_shop_data_input(block)
-                elif(client_name == 'customer'):
-                    customer_data_input(block)
+            # verify permission
+            if(rbac.verify_permission(client_role, 'update', 'blockchain')):
+                # read block
+                block = read_data()
+                # if block found then take new input from user to update data
+                if(block is not None):
+                    if(client_name == 'wood_cutter'):
+                        wood_cutter_data_input(block)
+                    elif(client_name == 'transporter'):
+                        transporter_data_input(block)
+                    elif(client_name == 'warehouse_storage'):
+                        warehouse_storage_data_input(block)
+                    elif(client_name == 'furniture_assembly'):
+                        furniture_assembly_data_input(block)
+                    elif(client_name == 'furniture_shop'):
+                        furniture_shop_data_input(block)
+                    elif(client_name == 'customer'):
+                        customer_data_input(block)
+            else:
+                print('You are not authorized to perform this action.')
             
             loop = True
 
         elif choice == '4':
             # delete data
-            # read block
-            block = read_data()
-
-            if(block is not None):
-                delete_data(block)
-                
+             # verify permission
+            if(rbac.verify_permission(client_role, 'delete', 'blockchain')):
+                # read block
+                block = read_data()
+                if(block is not None):
+                    delete_data(block)        
+            else:
+                print('You are not authorized to perform this action.')
+            
                 loop = True
         elif choice == '5':
             # share data
@@ -572,7 +586,6 @@ if __name__ == '__main__':
     port = args.port
     client_name = args.client
     client_role = args.role
-    
     # authenticate client name and role using rabac manager
     if(not rbac.authenticate(client_name, client_role)):
         print('Not authenticated.')

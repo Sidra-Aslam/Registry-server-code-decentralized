@@ -5,7 +5,8 @@ class RbacManager:
     def __init__(self):
         # list of clients
         self.clients = ["wood_cutter", "transporter", "warehouse_storage", "furniture_assembly",  "furniture_shop", "customer"]
-        
+        self.client_names = ", ".join(self.clients)
+
         # create rbac object of RBAC library
         self.acl = rbac.acl.Registry()
         # define roles
