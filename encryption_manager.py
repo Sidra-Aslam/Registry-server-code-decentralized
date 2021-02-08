@@ -7,6 +7,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa,padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+from cryptography.fernet import Fernet
 
 class EncryptionManager:
    private_key = None
@@ -48,7 +49,6 @@ class EncryptionManager:
       padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), 
       algorithm=hashes.SHA256(), label=None))
       
-      print('Data is encrypted using public key')
       # return encrypted data
       return encrypted.hex()
 
@@ -63,10 +63,42 @@ class EncryptionManager:
          # decrypt message 
          original_message = private_key.decrypt(bytes.fromhex(encrypted), 
             padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),algorithm=hashes.SHA256(),label=None))
-
-         print('Data is decrypted using private key')
+         
          # return original text
-         return original_message
+         decrypted_data = json.loads(original_message)
+
+         if(type(decrypted_data) == str):
+            decrypted_data = json.loads(decrypted_data)
+
+         return decrypted_data
+         
       except Exception as e:
          print(str(e))
          return None
+
+   def symetric_encrypt(self, data):
+      # create symetric key
+      key = Fernet.generate_key()
+      
+      # create Fernet class object (Fernet is used for symetric algorithm)
+      f = Fernet(key)
+      
+      json_str = json.dumps(data).encode('ascii')
+      
+      #encrypt data with symetric key
+      encrypted_text = f.encrypt(json_str).decode("utf-8")
+      return (encrypted_text, key) 
+   
+   def symetric_decrypt(self, cypher_text, key):
+      try:
+         # create Fernet class object (Fernet is used for symetric algorithm)
+         f = Fernet(key)
+         
+         # decrypt data
+         plain_text = f.decrypt(cypher_text.encode('ascii'))
+         
+         return plain_text
+      except Exception as e:
+         print(str(e))
+         return None
+   

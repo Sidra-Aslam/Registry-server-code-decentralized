@@ -22,6 +22,8 @@ class RbacManager:
         self.acl.allow('owner', 'write', 'blockchain')
         self.acl.allow('owner', 'update', 'blockchain')
         self.acl.allow('owner', 'delete', 'blockchain')
+        self.acl.allow('owner', 'share', 'blockchain')
+        
         self.acl.allow('business_partner', 'read', 'blockchain')
         self.acl.allow('public_user', 'read', 'blockchain')
         

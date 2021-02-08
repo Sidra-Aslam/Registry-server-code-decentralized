@@ -168,7 +168,8 @@ class BlockchainManager:
         index = int(index)
         if index > len(self.blockchain.chain)-1 or index < 0:
             return None
-        return self.blockchain.block_at_index(index)
+        block = self.blockchain.block_at_index(index)
+        return json.loads(block.transactions[0])
 
     # function to store data (pointer and metadata) on blockchain
     def new_transaction(self, pointer, user_id, privacy_type):

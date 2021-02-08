@@ -8,7 +8,6 @@ from encryption_manager import EncryptionManager
 from rbac_manager import RbacManager
 from dht_manager import DhtManager
 from kademlia.utils import digest
-
 import asyncio
 from urllib.parse import urlparse
 from time import sleep
@@ -21,7 +20,7 @@ peer_list = None
 blockChainManager = None
 
 # encryption manager object
-encryptionManager = EncryptionManager()
+encryptionManager = None
 
 # rbac manager object
 rbac = RbacManager()
@@ -47,8 +46,22 @@ my_dht_node_endpoint = None
 # dht manage object to access current dht node
 dht_manager = None
 
+# shared messages
+messages = []
+
 # create flask app object
 app = Flask(__name__)
+
+# api to receive block number of shared data
+# this will be called from any other client after sharing data
+@app.route('/shared_data', methods=['POST'])
+def shared_data():
+    global messages
+    # receive message
+    msg = request.data.decode('utf-8')
+    print(msg)
+    messages.append(msg)
+    return '', 200
 
 # api to return public key
 # this will be called from any other client
@@ -187,10 +200,14 @@ def transporter_data_input(block=None):
         'public': public_data
     }
 
+    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        create_data(data, private_data['UserId'], 'private-data')
+        # encrypt data with public key
+        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
+        create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
 
@@ -226,8 +243,14 @@ def wood_cutter_data_input(block=None):
         'public': public_data
     }
 
+    data = json.dumps(data)
+    # if block is none then this fuction will used to take input and create new data
+    # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        create_data(data, private_data['UserId'], 'private-data')
+        # encrypt data with public key
+        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
+        create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
 
@@ -267,8 +290,14 @@ def warehouse_storage_data_input(block=None):
         'public': public_data
     }
 
+    data = json.dumps(data)
+    # if block is none then this fuction will used to take input and create new data
+    # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        create_data(data, private_data['UserId'], 'private-data')
+        # encrypt data with public key
+        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
+        create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
 
@@ -304,8 +333,14 @@ def furniture_assembly_data_input(block=None):
         'public': public_data
     }
 
+    data = json.dumps(data)
+    # if block is none then this fuction will used to take input and create new data
+    # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        create_data(data, private_data['UserId'], 'private-data')
+        # encrypt data with public key
+        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
+        create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
 
@@ -339,8 +374,14 @@ def furniture_shop_data_input(block=None):
         'public': public_data
     }
 
+    data = json.dumps(data)
+    # if block is none then this fuction will used to take input and create new data
+    # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        create_data(data, private_data['UserId'], 'private-data')
+        # encrypt data with public key
+        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
+        create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
 
@@ -376,28 +417,23 @@ def customer_data_input(block=None):
         'public': public_data
     }
 
+    data = json.dumps(data)
+    # if block is none then this fuction will used to take input and create new data
+    # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        create_data(data, private_data['UserId'], 'private-data')
+        # encrypt data with public key
+        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+
+        create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-
-# # generate hash from data
-# def generate_hash(data):
-#     if not isinstance(data, bytes):
-#         string = str(data).encode('utf8')
-#     return hashlib.sha256(string).digest().hex()
 
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
-def create_data(data, user_id, privacy_type):
- # generate hash b using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
-    pointer = digest(data).hex()
-
-    data = json.dumps(data)
-
-    # encrypt data with public key
-    ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+def create_data(ecrypted_data, user_id, privacy_type):
+    # generate hash b using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
+    pointer = digest(ecrypted_data).hex()
 
     # store data on dht node
     dht_manager.set_value(pointer, ecrypted_data)
@@ -408,6 +444,7 @@ def create_data(data, user_id, privacy_type):
     # mine unconfirmed transactions and announce block to all peers
     result = blockChainManager.mine_unconfirmed_transactions()
     print(result)
+    return result
 
 # read data 
 # this function will return block
@@ -415,37 +452,24 @@ def read_data():
     blockNo = ''
     while len(blockNo) == 0:
         blockNo = input("Please enter block number to display: ")
+    
     # find block
     block = blockChainManager.findblock(blockNo)
     if(block is not None):
-        # to print block pointer/information
-        # print(block.__dict__)
-        # extract pointer from block object
-        pointer = json.loads(block.transactions[0])['data']
-        # retrieve data from dht against provided pointer
-        dht_data = dht_manager.get_value(pointer)
-        # check if dht_data is deleted then retun None
-        if(dht_data == 'DELETED'):
-            print('DHT data is deleted.')
-            return None
+        data = decrypt_block_content(block)
+        
+        if data is not None:
+            print(data)
+            return block
         else:
-            # decrypt dht data with private key
-            decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
-            print(decrypted_data)
-            # return block if dht data is decrypted properly
-            if(decrypted_data is not None):
-                return block
-            else:
-                return None
+            return None
     else:
         print('block not found')
         return None
 
 def update_data(data, block):
     # extract pointer from existing block
-    pointer = json.loads(block.transactions[0])['data']
-
-    data = json.dumps(data)
+    pointer = block['data']
 
     # encrypt data with public key
     ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
@@ -461,8 +485,156 @@ def delete_data(block):
     dht_manager.set_value(pointer, 'DELETED')
     print('Data deleted on DHT.')
 
-def share_data():
-    pass
+def decrypt_block_content(block):
+    if(block is not None):
+        # extract pointer from block object
+        pointer = block['data']
+        # read metadata from block
+        meta_data = block['meta-data']
+    
+        # get block privacy type e.g private, sensitive or public
+        privacy_type = meta_data['privacy-type']
+        
+        # retrieve data from dht against provided pointer
+        dht_data = dht_manager.get_value(pointer)
+
+        # check if current role is valid to access block based on privacy type
+        if( (client_role == 'owner') or
+            (privacy_type == 'sensitive-data' and client_role == 'business_partner') or
+            (privacy_type == 'public-data' and client_role == 'public_user')):
+            print('Privacy validated')
+        else:
+            print('You can not access this data.')
+            return None
+
+        # check if dht_data is deleted then retun None
+        if(dht_data == 'DELETED'):
+            print('DHT data is deleted.')
+            return None
+
+        elif dht_data is not None:
+            # convert to json (public and sensitive data)
+            if(privacy_type != 'private-data'):
+                dht_data = json.loads(dht_data)
+            
+            if(privacy_type == 'private-data'):
+                # decrypt dht data with owner's private key
+                decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
+                print("Data is decrypted using owner's private key")
+
+
+            # if data is encrypted with public key then decrypt data with receiver's private key
+            elif('asymetric-data' in dht_data):
+                # decrypt asymetric data by using receiver's private key
+                decrypted_data = encryptionManager.decrypt(dht_data['asymetric-data'], encryptionManager.private_key)
+                print("Data is decrypted using receivers's private key")
+
+
+            if decrypted_data is not None:
+                return decrypted_data
+            else:
+                return None
+
+    else:
+        print('block not found')
+        return None
+
+# get public key of receiver using endpoing '/public_key'
+def get_key(client):
+    try:
+        # get one peer endpoint from peer_list
+        peer = [p for p in peer_list if p['client_name'] == client]
+        if len(peer) > 0:
+            response = requests.get(peer[0]['client_address']+ "/public_key")
+            if response.ok:
+                return response.text
+            else:
+                return None
+        else:
+            print(client + ' peer is offline.')
+            return None
+    except:
+        print(client + ' peer is offline.')
+        return None
+
+# call '/shared_data' endpoint of receiver to share data
+def send_message(client, message):
+    try:
+        # find peer from peer_list
+        peer = [p for p in peer_list if p['client_name'] == client]
+        if len(peer) > 0:
+            # send shared data block number to receiver
+            requests.post(peer[0]['client_address']+ "/shared_data", data=message)
+        else:
+            print(client + ' peer is offline.')
+    except:
+        print('Failed to send message')
+
+# this method will be used to share data with other actors and roles
+def share_data(blockNo, shareWithClients, shareWithRoles):
+    # find block from blockchain by block no
+    block = blockChainManager.findblock(blockNo)
+
+    # access meta data from block
+    meta_data = block['meta-data']
+    
+    # get block privacy type e.g private, sensitive or public from this metadata
+    privacy_type = meta_data['privacy-type']
+
+    if(privacy_type != 'private-data'):
+        print('This block is already shared, it can not be shared again.')
+        return None
+        
+    # decrypt block
+    data = decrypt_block_content(block)
+    
+    # check if data is not deleted
+    if(data is not None):
+        # read user id from private data
+        user_id = data['private']['UserId']
+        # clients with whom data will be shared
+        clients = shareWithClients.split(',')
+        
+        if(shareWithRoles == 'business_partner'):
+            # there is one actor then use public key encryption
+            if(len(clients) == 1):
+                # there is only one actor
+                receiver_name = clients[0]
+                # retrieve receivers public key using endpoint ''
+                receiver_public_key = get_key(receiver_name)
+                
+                # encrypt sensitive data with receiver's public key
+                encrypted_text = encryptionManager.encrypt(data['sensitive'], receiver_public_key)
+                print("Data is encrypted using receiver's public key")
+
+                # create object which will contain encrypted text
+                data = json.dumps({'asymetric-data': encrypted_text})
+
+                # store data with privacy type as 'sensitive-data'. e.g block 2 is mined
+                blockNo = create_data(data, user_id, 'sensitive-data')
+                
+                # send block number to receiver through enndpoint, eng block 2 is mined
+                send_message(receiver_name, blockNo)
+
+        elif(shareWithRoles == 'public_user'):
+            # there is one actor then use public key encryption
+            if(len(clients) == 1):
+                # there is only one actor
+                receiver_name = clients[0]
+                receiver_public_key = get_key(receiver_name)
+                
+                # encrypt public data
+                encrypted_text = encryptionManager.encrypt(data['public'], receiver_public_key)
+                print("Data is encrypted using receiver's public key")
+
+                # create object which will contain encrypted text
+                data = json.dumps({'asymetric-data': encrypted_text})
+
+                # store data with privacy type as 'public-data'
+                blockNo = create_data(data, user_id, 'public-data')
+                
+                # send block number to receiver
+                send_message(receiver_name, blockNo)
 
 def display_menu():
     def print_menu():
@@ -472,9 +644,8 @@ def display_menu():
         print("3. Update data ")
         print("4. Delete data ")
         print("5. Share Data ")
-        print("6. Send Message ")
-        print("7. Receive Message ")
-        print("8. Display peers ")
+        print("6. Display Messages ")
+        print("7. Display peers ")
         print("0. Exit ")
         print(73 * "-")
 
@@ -554,19 +725,34 @@ def display_menu():
                 loop = True
         elif choice == '5':
             # share data
-            #TODO
-            pass
+            # verify permission
+            if(rbac.verify_permission(client_role, 'share', 'blockchain')):
+                blockNo = ''
+                shareWithActors = ''
+                shareWithRoles = ''
+                while len(blockNo) == 0:
+                    blockNo = input("Enter block# to share: ")
+                while len(shareWithActors) == 0:
+                    shareWithActors = input(
+                        "Write actor names you want to share data (i.e {0}): ".format(rbac.client_names))
+                while len(shareWithRoles) == 0:
+                    shareWithRoles = input(
+                        "Do you want to share data with business_partner or public_user ?")
+                
+                # share data to users
+                share_data(blockNo, shareWithActors, shareWithRoles)
+            else:
+                print('You are not authorized to perform this action.')
+            loop = True
+
         elif choice == '6':
-            # send message
-            # TODO
-            pass
+            # display message
+            print(messages)
+            loop=True
         elif choice == '7':
-            # read message
-            # TODO
-            pass
-        elif choice == '8':
             # display available peers
             print(peer_list)
+            loop=True
         elif choice == '0':
             unregister()
             print("Exiting..")
@@ -579,8 +765,8 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='customer', help='Enter client name')
-    parser.add_argument('-r', '--role', default='owner', help='Enter role name')
+    parser.add_argument('-c', '--client', default='wood_cutter', help='Enter client name')
+    parser.add_argument('-r', '--role', default='business_partner', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port
@@ -590,6 +776,8 @@ if __name__ == '__main__':
     if(not rbac.authenticate(client_name, client_role)):
         print('Not authenticated.')
         exit()
+    
+    encryptionManager = EncryptionManager()
 
     registry_server = "http://127.0.0.1:8080/"
     my_endpoint = "http://127.0.0.1:"+str(port)
