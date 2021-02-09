@@ -67,9 +67,6 @@ class EncryptionManager:
          # return original text
          decrypted_data = json.loads(original_message)
 
-         if(type(decrypted_data) == str):
-            decrypted_data = json.loads(decrypted_data)
-
          return decrypted_data
          
       except Exception as e:
@@ -87,7 +84,7 @@ class EncryptionManager:
       
       #encrypt data with symetric key
       encrypted_text = f.encrypt(json_str).decode("utf-8")
-      return (encrypted_text, key) 
+      return (encrypted_text, key.decode()) 
    
    def symetric_decrypt(self, cypher_text, key):
       try:
