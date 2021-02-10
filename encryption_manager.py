@@ -99,3 +99,50 @@ class EncryptionManager:
          print(str(e))
          return None
    
+   def create_sign(self, data, pvt_key):
+      # convert data object to json string
+      data = json.dumps(data).encode()
+
+      # convert key string back to original object
+      private_key = serialization.load_pem_private_key(
+         bytes.fromhex(pvt_key),
+         password=None,
+         backend=default_backend()
+      )
+      # create signature for data using private key
+      signature = private_key.sign(
+         data,
+         padding.PSS(
+               mgf=padding.MGF1(hashes.SHA256()),
+               salt_length=padding.PSS.MAX_LENGTH
+         ),
+         hashes.SHA256()
+      )
+      # return signature in string format
+      return signature.hex()
+   
+   def verify_sign(self, data, signature, pub_key):
+      try:
+         # convert data object to json string
+         data = json.dumps(data).encode()
+
+         # create public key object from string value
+         public_key = serialization.load_pem_public_key(
+            bytes.fromhex(pub_key),
+            backend=default_backend()
+         )
+         # verify data and signature using public key
+         public_key.verify(
+            bytes.fromhex(signature),
+            data,
+            padding.PSS(
+                  mgf=padding.MGF1(hashes.SHA256()),
+                  salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+         )
+         print('Signature verified')
+         return True
+      except:
+         print('Invalid signature')
+         return False

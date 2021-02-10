@@ -521,6 +521,7 @@ def decrypt_block_content(block):
             return None
 
         elif dht_data is not None:
+            decrypted_data = None
             # convert to json (public and sensitive data)
             if(privacy_type != 'private-data'):
                 dht_data = json.loads(dht_data)
@@ -530,14 +531,21 @@ def decrypt_block_content(block):
                 decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
                 print("Data is decrypted using owner's private key")
 
+            elif(privacy_type == 'public-data'):
+                # retrive sender's public key
+                sender_key = get_key(dht_data['signer'])
+                # verify signature and data using signer's public key
+                isVerified = encryptionManager.verify_sign(dht_data['public-data'],dht_data['signature'], sender_key)
+                if isVerified == True:
+                    decrypted_data = dht_data['public-data']
 
-            # if data is encrypted with public key then decrypt data with receiver's private key
+            # if data is encrypted with public key then decrypt data with receiver's private key (or business partner)
             elif('asymmetric-data' in dht_data):
                 # decrypt asymmetric data by using receiver's private key
                 decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)
                 print("Data is decrypted using receivers's private key")
 
-            # if data is encrypted with symmetric key
+            # if data is encrypted with symmetric key (for business partner)
             elif('symmetric-data' in dht_data):
                 # ask user to enter symetric key which is sent to through endpoint
                 symmmetric_key = input("Enter symmmetric key to decrypt block: ")
@@ -575,6 +583,7 @@ def get_key(client):
     except:
         print(client + ' peer is offline.')
         return None
+
 # this method will be called by sender to share data 
 # call '/shared_data' endpoint of receiver to share data
 def send_message(client, message):
@@ -638,7 +647,9 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                 
                 # send block number to receiver through enndpoint, eng block 2 is mined
                 send_message(receiver_name, msg)
-            else:
+
+            # for multiple receiver's use symmetric encryption and public key encryption
+            elif(len(clients) > 1):
                 # encrypt sensitive data with symmetric key and return (encrypted data and symmetric key)
                 encrypted_text, symmetric_key = encryptionManager.symetric_encrypt(data['sensitive'])
                 print("Data is encrypted using symmetric key")
@@ -671,61 +682,27 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                         print('Failed to shared key with ' + client)
                 
         elif(shareWithRoles == 'public_user'):
-            # there is one actor then use public key encryption
-            if(len(clients) == 1):
-                # there is only one actor
-                receiver_name = clients[0]
-                
-                receiver_public_key = get_key(receiver_name)
-                
-                # encrypt public data
-                encrypted_text = encryptionManager.encrypt(data['public'], receiver_public_key)
-                print("Data is encrypted using receiver's public key")
-
-                # create object which will contain encrypted text
-                data = json.dumps({'asymmetric-data': encrypted_text})
-
-                # store data with privacy type as 'public-data'
-                blockNo = create_data(data, user_id, 'public-data')
-                
-                # create msg object which will contain block
-                msg = json.dumps(
-                    {'block': blockNo})
-                
-                # send block number to receiver
-                send_message(receiver_name, msg)
-            else:
-                # encrypt public data with symmetric key
-                encrypted_text, symmetric_key = encryptionManager.symetric_encrypt(data['public'])
-                print("Data is encrypted using symmetric key")
-
-                # create object which will contain encrypted text
-                data = json.dumps({'symmetric-data': encrypted_text})
-
-                # store data with privacy type as 'public-data'
-                blockNo = create_data(data, user_id, 'public-data')
-
-                # iterate all clients to send block number and symmetric key
-                for client in clients:
-                    try:
-                        # remove empty spaces from client name
-                        client = client.strip()
-
-                        # retrieve receiver public key
-                        receiver_public_key = get_key(client)
-
-                        # encrypt symmetric key with receiver's public key
-                        encrypted_key = encryptionManager.encrypt(symmetric_key, receiver_public_key)
-
-                        # create msg object which contains block no and symmetric key
-                        msg = json.dumps(
-                            {'block': blockNo, 'symmetric_key': encrypted_key})
-                        
-                        # send block number and symmetric key to receiver
-                        send_message(client, msg)
-                    except:
-                        print('Failed to shared key with ' + client)
-                
+            # create sign with owner's private key
+            signature = encryptionManager.create_sign(data['public'], encryptionManager.private_key)
+            
+            # create object which will contain signature, public data and signer name
+            data = json.dumps({'signature': signature, 'public-data':data['public'], 'signer':client_name})
+            
+            # store data with privacy type as 'public-data'  data on DHT and pointer on blokchain 
+            blockNo = create_data(data, user_id, 'public-data')
+            
+            # create msg object which will contain block
+            msg = json.dumps({'block': blockNo})
+            
+            # iterate all clients to send block number and symmetric key
+            for client in clients:
+                try:
+                    # send block number and symmetric key to receiver
+                    send_message(client, msg)
+                except:
+                    print('Failed to share key with ' + client)
+        
+             
 def display_menu():
     def print_menu():
         print(30 * "-", client_name, " - ", client_role, 30 * "-")
@@ -855,7 +832,7 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='wood_cutter', help='Enter client name')
+    parser.add_argument('-c', '--client', default='warehouse_storage', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
     
     args = parser.parse_args()
