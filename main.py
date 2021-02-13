@@ -1,3 +1,5 @@
+from operator import truediv
+from ring_manager import RingManager
 from flask import Flask, request, jsonify
 from argparse import ArgumentParser
 import json
@@ -46,6 +48,9 @@ my_dht_node_endpoint = None
 # dht manage object to access current dht node
 dht_manager = None
 
+# declaration of ring manager
+ring_manager = None
+
 # shared messages
 messages = []
 
@@ -83,12 +88,19 @@ def public_key():
 def peers():
     global peer_list
     global blockChainManager
+    global ring_manager
+    
     peer_list = list(request.get_json())
     # remove my endpoint from peer list
     peer_list = [p for p in peer_list if p['client_address'] != my_endpoint]
 
     if(blockChainManager is not None):
         blockChainManager.peers = peer_list
+
+    # create object of ring manager using signer's private key and all public keys of other peers
+    ring_manager = RingManager(encryptionManager.public_key, encryptionManager.private_key, peer_list)
+    
+
     print('Peer list updated')
     print(peer_list)
     return ('', 200)
@@ -129,8 +141,9 @@ def verify_and_add_block():
 def register():
     try:
         headers = {'Content-Type': "application/json"}
-        req = requests.post(registry_server+ "/peers", data=json.dumps(
-            {"client_address": my_endpoint, "client_name": client_name}), headers=headers)
+        req = requests.post(registry_server+ "peers", data=json.dumps(
+            {"client_address": my_endpoint, "client_name": client_name, "public_key": encryptionManager.public_key}), headers=headers)
+
         if(req.ok):
             print('Connected with registry server')
         else:
@@ -143,7 +156,7 @@ def register():
 # function to disconnect with registry server
 def unregister():
     headers = {'Content-Type': "application/json"}
-    requests.post(registry_server+ "/peers", data=json.dumps(
+    requests.post(registry_server+ "peers", data=json.dumps(
         {"client_address": my_endpoint, "client_name": client_name}), headers=headers)         
 
 # initialize blockchain copy
@@ -535,24 +548,36 @@ def decrypt_block_content(block):
                 # retrive sender's public key
                 sender_key = get_key(dht_data['signer'])
                 # verify signature and data using signer's public key
-                isVerified = encryptionManager.verify_sign(dht_data['public-data'],dht_data['signature'], sender_key)
-                if isVerified == True:
+                isSignVerified = encryptionManager.verify_sign(dht_data['public-data'],dht_data['signature'], sender_key)
+                
+                # verify ring signature
+                isRingVerified = ring_manager.verify(dht_data['public-data'], dht_data['ring-sign'])
+                # isSignVerified -> signature created by using owner's private key
+                # isRingVerified -> ring signature
+                if isSignVerified == True and isRingVerified == True:
                     decrypted_data = dht_data['public-data']
+                
 
             # if data is encrypted with public key then decrypt data with receiver's private key (or business partner)
             elif('asymmetric-data' in dht_data):
-                # decrypt asymmetric data by using receiver's private key
-                decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)
-                print("Data is decrypted using receivers's private key")
+                # verify ring signature
+                isRingVerified = ring_manager.verify(dht_data['asymmetric-data'], dht_data['ring-sign'])
+                if(isRingVerified==True):
+                    # decrypt asymmetric data by using receiver's private key
+                    decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)                    
+                    print("Data is decrypted using receivers's private key")
 
             # if data is encrypted with symmetric key (for business partner)
             elif('symmetric-data' in dht_data):
-                # ask user to enter symetric key which is sent to through endpoint
-                symmmetric_key = input("Enter symmmetric key to decrypt block: ")
+                # verify ring signature
+                isRingVerified = ring_manager.verify(dht_data['symmetric-data'], dht_data['ring-sign'])
+                if(isRingVerified == True):
+                    # ask user to enter symetric key which is sent to through endpoint
+                    symmmetric_key = input("Enter symmmetric key to decrypt block: ")
 
-                # decrypt data by using symmetric key
-                decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], symmmetric_key)
-                print("Data is decrypted using symmetric key")
+                    # decrypt data by using symmetric key
+                    decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], symmmetric_key)
+                    print("Data is decrypted using symmetric key")
             
             if decrypted_data is not None:
                 if(type(decrypted_data) is str):
@@ -634,9 +659,11 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                 # encrypt sensitive data with receiver's public key
                 encrypted_text = encryptionManager.encrypt(data['sensitive'], receiver_public_key)
                 print("Data is encrypted using receiver's public key")
-
+                # create ring signature for business partner data
+                ring_sign = ring_manager.sign(encrypted_text)
+                
                 # create object which will contain encrypted text
-                data = json.dumps({'asymmetric-data': encrypted_text})
+                data = json.dumps({'asymmetric-data': encrypted_text, "ring-sign":ring_sign})
 
                 # store data with privacy type as 'sensitive-data'. e.g block 2 is mined
                 blockNo = create_data(data, user_id, 'sensitive-data')
@@ -653,9 +680,11 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                 # encrypt sensitive data with symmetric key and return (encrypted data and symmetric key)
                 encrypted_text, symmetric_key = encryptionManager.symetric_encrypt(data['sensitive'])
                 print("Data is encrypted using symmetric key")
-
+                # create ring signature for business partner data
+                ring_sign = ring_manager.sign(encrypted_text)
+                
                 # create object which will contain encrypted text
-                data = json.dumps({'symmetric-data': encrypted_text})
+                data = json.dumps({'symmetric-data': encrypted_text, "ring-sign":ring_sign})
 
                 # store data with privacy type as 'sensitive-data'
                 blockNo = create_data(data, user_id, 'sensitive-data')
@@ -669,9 +698,9 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                         # retrieve receiver's public key
                         receiver_public_key = get_key(client)
 
-                        # encrypt symmetric key with receiver's public key
+                        # encrypt symmetric key with receiver's public keyusing signer's private key and all public keys of other peers
                         encrypted_key = encryptionManager.encrypt(symmetric_key, receiver_public_key)
-
+                        print("symmetric key is encrypted with receiver's public key")
                         # create msg object which contains block no and symmetric key
                         msg = json.dumps(
                             {'block': blockNo, 'symmetric_key': encrypted_key})
@@ -684,10 +713,16 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
         elif(shareWithRoles == 'public_user'):
             # create sign with owner's private key
             signature = encryptionManager.create_sign(data['public'], encryptionManager.private_key)
-            
+            # create ring signature for public user data
+            ring_sign = ring_manager.sign(data['public'])
+            # to display ring signature
+            # print(ring_sign)
+
             # create object which will contain signature, public data and signer name
-            data = json.dumps({'signature': signature, 'public-data':data['public'], 'signer':client_name})
+            data = json.dumps({'signature': signature, 'public-data':data['public'], 
+                'signer':client_name, 'ring-sign':ring_sign})
             
+
             # store data with privacy type as 'public-data'  data on DHT and pointer on blokchain 
             blockNo = create_data(data, user_id, 'public-data')
             

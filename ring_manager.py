@@ -1,65 +1,51 @@
-# https://github.com/fernandolobato/ecc_linkable_ring_signatures
-
-from linkable_ring_signature import ring_signature, verify_ring_signature, concat, export_private_keys
-from ecdsa import SigningKey
-from ecdsa.util import randrange
-from ecdsa.curves import SECP256k1
-import ast
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from ring import Ring
 import json
+import binascii
 
 class RingManager:
-    # method to return private key of actor
-    def get_actor_key(self, actor) -> tuple:
-        # index of actor private key
-        index = self.actors.index(actor)
-        private_key = self._private_keys[index]
-        return (private_key, index)
+    def __init__(self, pub_key, pvt_key, peers):
+        # variable to hold current user private key + public key and all other users public keys
+        keys = []
+
+        # import private key of signer/ create object of private key
+        pv_key = RSA.importKey(pvt_key)
+        keys.append(pv_key)
+        
+        # import public key of signer/ create object of public key
+        pu_key = RSA.importKey(pub_key)
+        keys.append(pu_key)
+        
+        # import public keys of all other peers
+        for peer in peers:
+            pu_key = RSA.importKey(peer['public_key'])
+            keys.append(pu_key)
+
+        # create ring object using signer's private key and all public keys of other peers
+        self.ring = Ring(keys)
 
     # method to sign data
-    def sign(self, private_key, public_key_index, data) -> tuple:
-        # create signature using private key of current participant and all public keys
-        signature = ring_signature(private_key, public_key_index, data, self._public_keys)
-                
-        return signature
+    def sign(self, data):
+        data = json.dumps(data)
+        # create signature using signer's private key which is at first index in the keys list e.g 0
+        signature = self.ring.sign(data, 0)
+        print('Ring signature created')
+        # convert signature to string format
+        return ','.join(map(str, signature))
 
     # method to verify signature and data
-    def verify(self, signature, data) -> bool:
-        # verify message with all public keys
-        result = verify_ring_signature(data, self._public_keys, *signature)
-        return result
+    def verify(self, data, signature):
+        data = json.dumps(data)
+        # convert signature from string to list object
+        sign = list(map(int, signature.split(',')))
+        # verify signature
+        isVerified = self.ring.verify(data, sign)
+        if(isVerified):
+            print('Ring is verified')
+        else:
+            print('Ring verification failed')
+        return isVerified
 
-    def __init__(self, actors):
-        # list of actors
-        self.actors = actors
-        size = len(self.actors)
 
-        # generate private keys for all actors
-        self._private_keys = [randrange(SECP256k1.order) for i in range(size)]
-        
-        # generate public keys for all actors
-        self._public_keys = list(map(lambda i: SECP256k1.generator * i, self._private_keys))
-        pass
 
-#------------------------
-# for testing only
-
-# list of companies
-actors=["wood_cutter", "transporter", "warehouse_storage", "furniture_assembly",  "furniture_shop", "customer"]
-#--------------------------------
-wood_cutter_ring = RingManager(actors)
-
-data="hello world"
-# wood cutter creates signature
-sign = wood_cutter_ring.sign(wood_cutter_ring._private_keys[0], 0, data)
-print(sign)
-# wood cutter verifies signature
-verify = wood_cutter_ring.verify(sign, data)
-print(verify)
-
-#--------------------------------------------------
-# transporter ring
-transporter_ring = RingManager(actors)
-# tansporter verifies signature which is created by wood cutter
-verify = transporter_ring.verify(sign, data)
-
-print(verify)

@@ -24,13 +24,13 @@ class EncryptionManager:
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()
-      ).hex()
+      ).decode()
 
       # convert public key in string format
       self.public_key = pub_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-      ).hex()
+      ).decode()
       print('Private Key: '+self.private_key)
       print('Public Key: '+self.public_key)
       
@@ -41,7 +41,7 @@ class EncryptionManager:
       
       # create public key object from string value
       public_key = serialization.load_pem_public_key(
-         bytes.fromhex(pub_key),
+         pub_key.encode(),
          backend=default_backend()
       )
       # encrypt data by using public key
@@ -56,7 +56,7 @@ class EncryptionManager:
       try:
          # convert key string back to original object
          private_key = serialization.load_pem_private_key(
-            bytes.fromhex(pvt_key),
+            pvt_key.encode(),
             password=None,
             backend=default_backend()
          )
@@ -105,7 +105,7 @@ class EncryptionManager:
 
       # convert key string back to original object
       private_key = serialization.load_pem_private_key(
-         bytes.fromhex(pvt_key),
+         pvt_key.encode(),
          password=None,
          backend=default_backend()
       )
@@ -128,7 +128,7 @@ class EncryptionManager:
 
          # create public key object from string value
          public_key = serialization.load_pem_public_key(
-            bytes.fromhex(pub_key),
+            pub_key.encode(),
             backend=default_backend()
          )
          # verify data and signature using public key
