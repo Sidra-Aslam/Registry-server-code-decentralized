@@ -10,11 +10,9 @@ from encryption_manager import EncryptionManager
 from rbac_manager import RbacManager
 from dht_manager import DhtManager
 from kademlia.utils import digest
-import asyncio
 from urllib.parse import urlparse
 from time import sleep
-import hashlib
-import uuid
+import time
 
 # variable to store perrs list
 peer_list = []
@@ -213,7 +211,9 @@ def transporter_data_input(block=None):
     # take public data from actor
     while len(public_data['DeliveryDate']) == 0:
         public_data['DeliveryDate'] = input("Delivery date: ")
-    
+    # declare varible to calculate create and store data starting time
+    start_time = time.time()
+
     # create data object
     data = {
         'private': private_data,
@@ -231,7 +231,10 @@ def transporter_data_input(block=None):
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-
+    # complete create and store data time 
+    end_time = time.time()
+    print("\nTime to create / update data is :", (end_time-start_time))
+    
 # data input function for wood_cutter actor
 def wood_cutter_data_input(block=None):
     # wood_cutter object to hold private data
@@ -257,6 +260,8 @@ def wood_cutter_data_input(block=None):
     while len(public_data['WoodType']) == 0:
         public_data['WoodType'] = input("Wood Type: ")
     
+    start_time = time.time()
+
     # create data object
     data = {
         'private': private_data,
@@ -274,6 +279,9 @@ def wood_cutter_data_input(block=None):
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
+
+    end_time = time.time()
+    print("\nTime to create / update data is :", (end_time-start_time))
 
 # data input function for warehouse_storage actor
 def warehouse_storage_data_input(block=None):
@@ -303,7 +311,9 @@ def warehouse_storage_data_input(block=None):
     # take other data from actor
     while len(public_data['Processed']) == 0:
         public_data['Processed'] = input("Processed (Yes/No): ")
-    
+
+    start_time = time.time()
+
     # create data object
     data = {
         'private': private_data,
@@ -321,7 +331,10 @@ def warehouse_storage_data_input(block=None):
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-
+    
+    end_time = time.time()
+    print("\nTime to create / update data is :", (end_time-start_time))
+    
 # data input function for furniture_assembly actor
 def furniture_assembly_data_input(block=None):
     # wood_cutter object to hold private data
@@ -346,7 +359,9 @@ def furniture_assembly_data_input(block=None):
     # take other data from actor
     while len(public_data['FurnitureName']) == 0:
         public_data['FurnitureName'] = input("Furniture Name: ")
-    
+
+    start_time = time.time()
+
     # create data object
     data = {
         'private': private_data,
@@ -364,7 +379,10 @@ def furniture_assembly_data_input(block=None):
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-
+    
+    end_time = time.time()
+    print("\nTime to create / update data is :", (end_time-start_time))
+    
 # data input function for furniture_assembly actor
 def furniture_shop_data_input(block=None):
     # wood_cutter object to hold private data
@@ -387,7 +405,9 @@ def furniture_shop_data_input(block=None):
     # take other data from actor
     while len(public_data['FurnitureQuality']) == 0:
         public_data['FurnitureQuality'] = input("Furniture quality: ")
-    
+
+    start_time = time.time()
+
     # create data object
     data = {
         'private': private_data,
@@ -405,7 +425,10 @@ def furniture_shop_data_input(block=None):
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-
+    
+    end_time = time.time()
+    print("\nTime to create / update data is :", (end_time-start_time))
+    
 # data input function for customer actor
 def customer_data_input(block=None):
     # wood_cutter object to hold private data
@@ -430,7 +453,9 @@ def customer_data_input(block=None):
         sensitive_data['PurchasedQuantity'] = input("Purchased quantity: ")
     while len(sensitive_data['Style']) == 0:
         sensitive_data['Style'] = input("Style: ")
-    
+
+    start_time = time.time()
+
     # create data object
     data = {
         'private': private_data,
@@ -448,7 +473,10 @@ def customer_data_input(block=None):
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-
+    
+    end_time = time.time()
+    print("\nTime to create / update data is :", (end_time-start_time))
+    
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
@@ -473,12 +501,18 @@ def read_data():
     blockNo = ''
     while len(blockNo) == 0:
         blockNo = input("Please enter block number to display: ")
+    # calculate start time to read data 
+    start_time = time.time()
     
     # find block
     block = blockChainManager.findblock(blockNo)
+
     if(block is not None):
         data = decrypt_block_content(block)
-        
+        # calculate end time to read data 
+        end_time = time.time()
+        print("\nTime to read data (blockchain, dht, decryption) is :", (end_time-start_time))
+            
         if data is not None:
             print(data)
             return block
@@ -501,7 +535,7 @@ def update_data(data, block):
 
 def delete_data(block):
     # extract pointer from existing block
-    pointer = json.loads(block.transactions[0])['data']
+    pointer = block['data']
     # 'DELETED' will identify that data is deleted
     dht_manager.set_value(pointer, 'DELETED')
     print('Data deleted on DHT.')
@@ -778,8 +812,9 @@ def display_menu():
             else:
                 print('You are not authorized to perform this action.')
             
-            loop = True
+
         elif choice == '2':
+
             # read data
              # verify permission
             if(rbac.verify_permission(client_role, 'read', 'blockchain')):
@@ -787,7 +822,6 @@ def display_menu():
             else:
                 print('You are not authorized to perform this action.')
             
-            loop = True
         elif choice == '3':
             # update data
             # verify permission
@@ -810,8 +844,7 @@ def display_menu():
                         customer_data_input(block)
             else:
                 print('You are not authorized to perform this action.')
-            
-            loop = True
+
 
         elif choice == '4':
             # delete data
@@ -820,15 +853,20 @@ def display_menu():
                 # read block
                 block = read_data()
                 if(block is not None):
-                    delete_data(block)        
+                    # calculate start time for delete data
+                    start_time = time.time()
+                    delete_data(block)
+                    end_time = time.time()
+                    print("\nTime to delete data is :", (end_time-start_time))
+
             else:
                 print('You are not authorized to perform this action.')
             
-                loop = True
         elif choice == '5':
             # share data
             # verify permission
             if(rbac.verify_permission(client_role, 'share', 'blockchain')):
+                
                 blockNo = ''
                 shareWithActors = ''
                 shareWithRoles = ''
@@ -840,9 +878,13 @@ def display_menu():
                 while len(shareWithRoles) == 0:
                     shareWithRoles = input(
                         "Do you want to share data with business_partner or public_user ?")
-                
+                # calculate start time for share data
+                start_time = time.time()
                 # share data to users
                 share_data(blockNo, shareWithActors, shareWithRoles)
+                end_time = time.time()
+                print("\nTime to share data is :", (end_time-start_time))
+                
             else:
                 print('You are not authorized to perform this action.')
             loop = True
