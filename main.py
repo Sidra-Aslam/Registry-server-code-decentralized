@@ -100,7 +100,6 @@ def peers():
     
 
     print('Peer list updated')
-    print(peer_list)
     return ('', 200)
 
 # api to return blockchain copy
@@ -225,15 +224,16 @@ def transporter_data_input(block=None):
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
+        enc_time=time.time()
         # encrypt data with public key
         ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-
+        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
+        
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
     # complete create and store data time 
-    end_time = time.time()
-    print("\nTime to create / update data is :", (end_time-start_time))
+    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for wood_cutter actor
 def wood_cutter_data_input(block=None):
@@ -273,15 +273,17 @@ def wood_cutter_data_input(block=None):
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
+        enc_time=time.time()
         # encrypt data with public key
         ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-
+        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
+       
+        
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
 
-    end_time = time.time()
-    print("\nTime to create / update data is :", (end_time-start_time))
+    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
 
 # data input function for warehouse_storage actor
 def warehouse_storage_data_input(block=None):
@@ -325,15 +327,17 @@ def warehouse_storage_data_input(block=None):
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
+        enc_time=time.time()
         # encrypt data with public key
         ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-
+        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
+       
+        
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
     
-    end_time = time.time()
-    print("\nTime to create / update data is :", (end_time-start_time))
+    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for furniture_assembly actor
 def furniture_assembly_data_input(block=None):
@@ -373,15 +377,16 @@ def furniture_assembly_data_input(block=None):
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
+        enc_time=time.time()
         # encrypt data with public key
         ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-
+        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
+        
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
     
-    end_time = time.time()
-    print("\nTime to create / update data is :", (end_time-start_time))
+    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for furniture_assembly actor
 def furniture_shop_data_input(block=None):
@@ -419,15 +424,17 @@ def furniture_shop_data_input(block=None):
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
+        enc_time=time.time()
         # encrypt data with public key
         ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-
+        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
+       
+        
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
     
-    end_time = time.time()
-    print("\nTime to create / update data is :", (end_time-start_time))
+    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for customer actor
 def customer_data_input(block=None):
@@ -467,31 +474,41 @@ def customer_data_input(block=None):
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
+        enc_time=time.time()
         # encrypt data with public key
         ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
+       
 
         create_data(ecrypted_data, private_data['UserId'], 'private-data')
     else:
         update_data(data, block)
-    
-    end_time = time.time()
-    print("\nTime to create / update data is :", (end_time-start_time))
+    # 
+    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
 def create_data(ecrypted_data, user_id, privacy_type):
+
     # generate hash b using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
     pointer = digest(ecrypted_data).hex()
 
+    dht_time=time.time()
     # store data on dht node
     dht_manager.set_value(pointer, ecrypted_data)
+    dht_end_time = time.time()-dht_time
+    # Just DHT time to store data without any other e.g decryption and blockchain
+    print("\nTime to store data on dht (without encryption and blockchain):", dht_end_time)
     
+    blockchain_time=time.time()
     # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
     blockChainManager.new_transaction(pointer, user_id, privacy_type)
-
     # mine unconfirmed transactions and announce block to all peers
     result = blockChainManager.mine_unconfirmed_transactions()
+    # just blockchain time to store pointer
+    print("\nTime to store pointer on blockchain (without dht and encryption):", (time.time()-blockchain_time))
+    
     print(result)
     return result
 
@@ -501,18 +518,19 @@ def read_data():
     blockNo = ''
     while len(blockNo) == 0:
         blockNo = input("Please enter block number to display: ")
+    
     # calculate start time to read data 
     start_time = time.time()
     
     # find block
     block = blockChainManager.findblock(blockNo)
-
+    print("\nTime to read blockchain without dht and decryption:", (time.time()-start_time))
+    
     if(block is not None):
         data = decrypt_block_content(block)
         # calculate end time to read data 
-        end_time = time.time()
-        print("\nTime to read data (blockchain, dht, decryption) is :", (end_time-start_time))
-            
+        print("\nTotal read time (includes: blockchain, dht, decryption) is :", (time.time()-start_time))
+        
         if data is not None:
             print(data)
             return block
@@ -525,11 +543,15 @@ def read_data():
 def update_data(data, block):
     # extract pointer from existing block
     pointer = block['data']
-
+    enc_time=time.time()
     # encrypt data with public key
     ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+    
+    dht_time=time.time()
     # store data on dht node
     dht_manager.set_value(pointer, ecrypted_data)
+    print("\nTime to update data without encryption on dht without blockchain:", (time.time()-dht_time))
+    print("\nTime to update data with encryption on dht without blockchain:", (time.time()-enc_time))
     
     print('data updated')
 
@@ -542,6 +564,8 @@ def delete_data(block):
 
 def decrypt_block_content(block):
     if(block is not None):
+        dht_time = time.time()
+
         # extract pointer from block object
         pointer = block['data']
         # read metadata from block
@@ -550,8 +574,12 @@ def decrypt_block_content(block):
         # get block privacy type e.g private, sensitive or public
         privacy_type = meta_data['privacy-type']
         
+        
         # retrieve data from dht against provided pointer
         dht_data = dht_manager.get_value(pointer)
+        print("\nTime to read dht data (without blockchain and decryption):", (time.time()-dht_time))
+        
+        decryption_time=time.time()
 
         # check if current role is valid to access block based on privacy type
         if( (client_role == 'owner') or
@@ -612,6 +640,9 @@ def decrypt_block_content(block):
                     # decrypt data by using symmetric key
                     decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], symmmetric_key)
                     print("Data is decrypted using symmetric key")
+            
+            print("\nTime to decrypt dht data excluding dht and blockchain:", (time.time()-decryption_time))
+            print("\nTime to read dht data (with decryption):", (time.time()-dht_time))
             
             if decrypted_data is not None:
                 if(type(decrypted_data) is str):
@@ -681,6 +712,7 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
         user_id = data['private']['UserId']
         # clients with whom data will be shared
         clients = shareWithClients.replace(' ', '').split(',')
+        share_time = time.time()
         
         if(shareWithRoles == 'business_partner'):
             # there is one actor then use public key encryption
@@ -771,7 +803,8 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                 except:
                     print('Failed to share key with ' + client)
         
-             
+        print("\nTime to share data with encryption (excluding  reading time):", (time.time()-share_time))
+
 def display_menu():
     def print_menu():
         print(30 * "-", client_name, " - ", client_role, 30 * "-")
@@ -793,9 +826,12 @@ def display_menu():
         choice = input("Enter your choice [1-7]: ")
 
         if choice == '1':
+            start_time = time.time()
             # create data
             # verify permission
             if(rbac.verify_permission(client_role, 'write', 'blockchain')):
+                print("\nTime to verify permission:", (time.time()-start_time))
+
                 # display menu based on actor name
                 if(client_name == 'wood_cutter'):
                     wood_cutter_data_input()
@@ -812,7 +848,6 @@ def display_menu():
             else:
                 print('You are not authorized to perform this action.')
             
-
         elif choice == '2':
 
             # read data
@@ -857,7 +892,7 @@ def display_menu():
                     start_time = time.time()
                     delete_data(block)
                     end_time = time.time()
-                    print("\nTime to delete data is :", (end_time-start_time))
+                    print("\nTime to delete data on DHT is :", (end_time-start_time))
 
             else:
                 print('You are not authorized to perform this action.')
@@ -883,7 +918,7 @@ def display_menu():
                 # share data to users
                 share_data(blockNo, shareWithActors, shareWithRoles)
                 end_time = time.time()
-                print("\nTime to share data is :", (end_time-start_time))
+                print("\nOverall time to share data is :", (end_time-start_time))
                 
             else:
                 print('You are not authorized to perform this action.')
@@ -895,7 +930,11 @@ def display_menu():
             loop=True
         elif choice == '7':
             # display available peers
-            print(peer_list)
+            for peer in peer_list:
+                print("client address: ", peer['client_address'])
+                print("client name: \t", peer['client_name'])
+                print(60 * "-")
+                
             loop=True
         elif choice == '0':
             unregister()
@@ -909,8 +948,8 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='warehouse_storage', help='Enter client name')
-    parser.add_argument('-r', '--role', default='owner', help='Enter role name')
+    parser.add_argument('-c', '--client', default='furniture_shop', help='Enter client name')
+    parser.add_argument('-r', '--role', default='business_partner', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port

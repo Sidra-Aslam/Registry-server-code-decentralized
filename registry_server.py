@@ -64,7 +64,7 @@ def peers():
             
  
     print('Current peer list')
-    print(peer_list)
+    #print(peer_list)
     
     return ('', 200)   
 

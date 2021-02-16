@@ -31,8 +31,8 @@ class EncryptionManager:
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
       ).decode()
-      print('Private Key: '+self.private_key)
-      print('Public Key: '+self.public_key)
+      # print('Private Key: '+self.private_key)
+      # print('Public Key: '+self.public_key)
       
       
    def encrypt(self, data, pub_key):
