@@ -1,5 +1,6 @@
 # https://github.com/jackeyGao/simple-rbac
 import rbac.acl
+import time
 
 class RbacManager:
     def __init__(self):
@@ -29,8 +30,11 @@ class RbacManager:
         
     # this method will be used to verify permission
     def verify_permission(self, role, operation, resource):
-        return self.acl.is_allowed(role, operation, resource) is not None
-
+        start_time = time.time()
+        result = self.acl.is_allowed(role, operation, resource) is not None
+        print("\nTime to verify permission:", (time.time()-start_time))
+        return result
+        
     # this method will be used to authenticate role if it exists
     def authenticate(self, client, role):
         return client in self.clients and self.acl._roles.get(role) is not None

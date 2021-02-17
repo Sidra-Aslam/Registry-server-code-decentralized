@@ -154,7 +154,7 @@ def register():
 def unregister():
     headers = {'Content-Type': "application/json"}
     requests.post(registry_server+ "peers", data=json.dumps(
-        {"client_address": my_endpoint, "client_name": client_name}), headers=headers)         
+        {"client_address": my_endpoint, "client_name": client_name, "public_key": encryptionManager.public_key}), headers=headers)         
 
 # initialize blockchain copy
 def initialize_blockchain():
@@ -497,7 +497,7 @@ def create_data(ecrypted_data, user_id, privacy_type):
     dht_time=time.time()
     # store data on dht node
     dht_manager.set_value(pointer, ecrypted_data)
-    dht_end_time = time.time()-dht_time
+    dht_end_time = time.time() - dht_time
     # Just DHT time to store data without any other e.g decryption and blockchain
     print("\nTime to store data on dht (without encryption and blockchain):", dht_end_time)
     
@@ -520,16 +520,16 @@ def read_data():
         blockNo = input("Please enter block number to display: ")
     
     # calculate start time to read data 
-    start_time = time.time()
+    s_time = time.time()
     
     # find block
     block = blockChainManager.findblock(blockNo)
-    print("\nTime to read blockchain without dht and decryption:", (time.time()-start_time))
+    print("\nTime to read blockchain without dht and decryption:", (time.time()-s_time))
     
     if(block is not None):
         data = decrypt_block_content(block)
         # calculate end time to read data 
-        print("\nTotal read time (includes: blockchain, dht, decryption) is :", (time.time()-start_time))
+        print("\nTotal read time (includes: blockchain, dht, decryption) is :", (time.time()-s_time))
         
         if data is not None:
             print(data)
@@ -721,13 +721,14 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                 receiver_name = clients[0]
                 # retrieve receivers public key using endpoint ''
                 receiver_public_key = get_key(receiver_name)
-                
+                enc_time = time.time()
                 # encrypt sensitive data with receiver's public key
                 encrypted_text = encryptionManager.encrypt(data['sensitive'], receiver_public_key)
                 print("Data is encrypted using receiver's public key")
                 # create ring signature for business partner data
                 ring_sign = ring_manager.sign(encrypted_text)
-                
+                print("\nTime to encrypt data and create ring signature for one user:", (time.time()-enc_time))
+
                 # create object which will contain encrypted text
                 data = json.dumps({'asymmetric-data': encrypted_text, "ring-sign":ring_sign})
 
@@ -743,11 +744,13 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
 
             # for multiple receiver's use symmetric encryption and public key encryption
             elif(len(clients) > 1):
+                enc_time = time.time()
                 # encrypt sensitive data with symmetric key and return (encrypted data and symmetric key)
                 encrypted_text, symmetric_key = encryptionManager.symetric_encrypt(data['sensitive'])
                 print("Data is encrypted using symmetric key")
                 # create ring signature for business partner data
                 ring_sign = ring_manager.sign(encrypted_text)
+                print("\nTime to encrypt data with symmertic key and create ring signature for multiple user:", (time.time()-enc_time))
                 
                 # create object which will contain encrypted text
                 data = json.dumps({'symmetric-data': encrypted_text, "ring-sign":ring_sign})
@@ -777,13 +780,15 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                         print('Failed to shared key with ' + client)
                 
         elif(shareWithRoles == 'public_user'):
+            enc_time = time.time()
             # create sign with owner's private key
             signature = encryptionManager.create_sign(data['public'], encryptionManager.private_key)
             # create ring signature for public user data
             ring_sign = ring_manager.sign(data['public'])
             # to display ring signature
             # print(ring_sign)
-
+            print("\nTime to create owner's private key signature and ring signature for public user:", (time.time()-enc_time))
+            
             # create object which will contain signature, public data and signer name
             data = json.dumps({'signature': signature, 'public-data':data['public'], 
                 'signer':client_name, 'ring-sign':ring_sign})
@@ -803,7 +808,7 @@ def share_data(blockNo, shareWithClients, shareWithRoles):
                 except:
                     print('Failed to share key with ' + client)
         
-        print("\nTime to share data with encryption (excluding  reading time):", (time.time()-share_time))
+        print("\nTime to share data with encryption, ring signature, with data replication on blockchain (excluding  reading time):", (time.time()-share_time))
 
 def display_menu():
     def print_menu():
@@ -830,8 +835,6 @@ def display_menu():
             # create data
             # verify permission
             if(rbac.verify_permission(client_role, 'write', 'blockchain')):
-                print("\nTime to verify permission:", (time.time()-start_time))
-
                 # display menu based on actor name
                 if(client_name == 'wood_cutter'):
                     wood_cutter_data_input()
