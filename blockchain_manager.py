@@ -240,7 +240,7 @@ class BlockchainManager:
         respective chains.
         """
         for peer in self.peers:
-            url = peer['client_address']+"/add_block"
+            url = peer['client_address']+"/chain"
             try:
                 headers = {'Content-Type': "application/json"}
                 requests.post(url,

@@ -4,8 +4,7 @@ import asyncio
 import logging
 import nest_asyncio
 import threading
-from time import sleep
-import subprocess
+from time import sleep, time
 
 class DhtManager:
     def __init__(self, port, peer_list):
@@ -61,4 +60,3 @@ class DhtManager:
 
     def set_value(self, key, value):
         self.loop.run_until_complete(self.dht_node.set(key, value))
-

@@ -102,37 +102,38 @@ def peers():
     print('Peer list updated')
     return ('', 200)
 
-# api to return blockchain copy
+# api to return blockchain copy or replicate block on peers
 # this will be called from any other client
-@app.route('/chain', methods=['GET'])
+@app.route('/chain', methods=['GET', 'POST'])
 def chain():
     global blockChainManager
-    chain_data = []
-    # iterate all blocks from blockchain
-    for block in blockChainManager.blockchain.chain:
-        chain_data.append(block.__dict__)
+    # return blockchain copy
+    if request.method == 'GET':
+        chain_data = []
+        # iterate all blocks from blockchain
+        for block in blockChainManager.blockchain.chain:
+            chain_data.append(block.__dict__)
+        
+        return jsonify(chain_data)
     
-    return jsonify(chain_data)
+    # post method, this will be called by other clients to replicate data on other BC nodes after mining
+    elif request.method == 'POST':
+        block_data = request.get_json()
+        # create new block object
+        block = Block(block_data["index"],
+                    block_data["transactions"],
+                    block_data["timestamp"],
+                    block_data["previous_hash"],
+                    block_data["nonce"])
 
-# endpoint to add blocks, this will be called by other clients and replicate data on other BC nodes after mining
-@app.route('/add_block', methods=['POST'])
-def verify_and_add_block():
-    block_data = request.get_json()
-    # create new block object
-    block = Block(block_data["index"],
-                  block_data["transactions"],
-                  block_data["timestamp"],
-                  block_data["previous_hash"],
-                  block_data["nonce"])
+        proof = block_data['hash']
+        # add block to the chain
+        added = blockChainManager.blockchain.add_block(block, proof)
 
-    proof = block_data['hash']
-    # add block to the chain
-    added = blockChainManager.blockchain.add_block(block, proof)
+        if not added:
+            return "The block was discarded by the node", 400
 
-    if not added:
-        return "The block was discarded by the node", 400
-
-    return "Block added to the chain", 201
+        return "Block added to the chain", 201
 
 # function to connect with registry server
 def register():
@@ -512,6 +513,7 @@ def create_data(ecrypted_data, user_id, privacy_type):
     print(result)
     return result
 
+total_read_time = 0
 # read data 
 # this function will return block
 def read_data():
@@ -528,8 +530,9 @@ def read_data():
     
     if(block is not None):
         data = decrypt_block_content(block)
+        total_read_time = (time.time()-s_time)
         # calculate end time to read data 
-        print("\nTotal read time (includes: blockchain, dht, decryption) is :", (time.time()-s_time))
+        print("\nTotal read time (includes: blockchain, dht, decryption) is :", total_read_time)
         
         if data is not None:
             print(data)
@@ -581,13 +584,9 @@ def decrypt_block_content(block):
         
         decryption_time=time.time()
 
-        # check if current role is valid to access block based on privacy type
-        if( (client_role == 'owner') or
-            (client_role == 'business_partner' and privacy_type != 'private-data') or
-            (client_role == 'public_user' and privacy_type == 'public-data')):
-            print('Privacy validated')
-        else:
-            print('You can not access this data.')
+        # check if current role is valid to access block based on privacy type (private data, public data, privacy-sensitive data)
+        if(rbac.verify_privacy(client_role, privacy_type) == False):
+            print('You are not authorized to access this data.')
             return None
 
         # check if dht_data is deleted then retun None
@@ -892,10 +891,12 @@ def display_menu():
                 block = read_data()
                 if(block is not None):
                     # calculate start time for delete data
-                    start_time = time.time()
+                    delete_time = time.time()
                     delete_data(block)
-                    end_time = time.time()
-                    print("\nTime to delete data on DHT is :", (end_time-start_time))
+                    just_delete_time = (time.time()-delete_time)
+                    print("\nJust DHT time to delete data:", just_delete_time)
+                    print("\Total time to delete data (read, decryption, RBAC, DHt delete):", (just_delete_time + total_read_time))
+                    
 
             else:
                 print('You are not authorized to perform this action.')
