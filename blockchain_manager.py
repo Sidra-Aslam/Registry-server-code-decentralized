@@ -172,14 +172,15 @@ class BlockchainManager:
         return json.loads(block.transactions[0])
 
     # function to store data (pointer and metadata) on blockchain
-    def new_transaction(self, pointer, user_id, privacy_type):
+    def new_transaction(self, pointer, user_id, privacy_type, client_name):
         dataObj = {
             'data':pointer,
             'meta-data' : {
                 'user-id':user_id,
                 'data-entry-date':datetime.now().strftime("%d/%m/%Y"),
                 'data-entry-time':datetime.now().strftime("%H:%M:%S"),
-                'privacy-type':privacy_type
+                'privacy-type':privacy_type,
+                'client-name':client_name
             }
         }
         # create json string

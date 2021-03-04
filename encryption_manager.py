@@ -93,8 +93,8 @@ class EncryptionManager:
          
          # decrypt data
          plain_text = f.decrypt(cypher_text.encode('ascii'))
-         
-         return plain_text
+         # return plain text in json format
+         return json.loads(plain_text.decode("utf-8"))
       except Exception as e:
          print(str(e))
          return None

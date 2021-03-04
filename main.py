@@ -55,25 +55,6 @@ messages = []
 # create flask app object
 app = Flask(__name__)
 
-#it will execte on receiver's end/main file
-# api to receive block number of shared data
-# this will be called from any other client after sharing data
-@app.route('/shared_data', methods=['POST'])
-def shared_data():
-    global messages
-    # receive message
-    msg = json.loads(request.data.decode())
-    print('Received data')
-    if('symmetric_key' in msg):
-        # decrypt symmetric key with receiver's private key
-        symmetric_key = encryptionManager.decrypt(msg['symmetric_key'], encryptionManager.private_key)
-        msg = {'block':msg['block'], 'symmetric_key':symmetric_key}
-        print("symmetric_key decrypted with receiver's private key")
-    
-    print(msg)
-    messages.append(msg)
-    return '', 200
-
 # api to return public key
 # this will be called from any other client
 @app.route('/public_key', methods=['GET'])
@@ -104,11 +85,13 @@ def peers():
 
 # api to return blockchain copy or replicate block on peers
 # this will be called from any other client
-@app.route('/chain', methods=['GET', 'POST'])
-def chain():
+
+@app.route('/chain', methods=['GET', 'POST']) # route mapping with get/post request
+@app.route('/chain/<block_no>', methods=['POST']) # route mapping with post and block number (for request data)
+def chain(block_no=None):
     global blockChainManager
     # return blockchain copy
-    if request.method == 'GET':
+    if request.method == 'GET' and block_no is None:
         chain_data = []
         # iterate all blocks from blockchain
         for block in blockChainManager.blockchain.chain:
@@ -116,6 +99,27 @@ def chain():
         
         return jsonify(chain_data)
     
+    # for requester
+    # get method and there is block number, so return the data from location
+    elif request.method == 'POST' and block_no is not None:
+        # get requester role and name
+        requester = request.get_json()
+        block = blockChainManager.findblock(block_no)
+        # decrypt data
+        data = decrypt_block_content(block)
+        
+        # role is owner return complete data
+        if requester['role'] == 'owner':
+            return jsonify(data)
+        # role is business partner, return sensitive and public data
+        elif requester['role'] == 'business_partner':
+            # remove private data from data object and share privacy-sensitive and public data
+            del data['private']
+            return jsonify(data)
+        # role is public user, return public data only
+        elif requester['role'] == 'public_user':
+            return jsonify(data['public'])
+        
     # post method, this will be called by other clients to replicate data on other BC nodes after mining
     elif request.method == 'POST':
         block_data = request.get_json()
@@ -221,16 +225,10 @@ def transporter_data_input(block=None):
         'public': public_data
     }
 
-    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        enc_time=time.time()
-        # encrypt data with public key
-        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
-        
-        create_data(ecrypted_data, private_data['UserId'], 'private-data')
+        create_data(data)
     else:
         update_data(data, block)
     # complete create and store data time 
@@ -270,17 +268,10 @@ def wood_cutter_data_input(block=None):
         'public': public_data
     }
 
-    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        enc_time=time.time()
-        # encrypt data with public key
-        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
-       
-        
-        create_data(ecrypted_data, private_data['UserId'], 'private-data')
+        create_data(data)
     else:
         update_data(data, block)
 
@@ -324,17 +315,10 @@ def warehouse_storage_data_input(block=None):
         'public': public_data
     }
 
-    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        enc_time=time.time()
-        # encrypt data with public key
-        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
-       
-        
-        create_data(ecrypted_data, private_data['UserId'], 'private-data')
+        create_data(data)
     else:
         update_data(data, block)
     
@@ -374,16 +358,10 @@ def furniture_assembly_data_input(block=None):
         'public': public_data
     }
 
-    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        enc_time=time.time()
-        # encrypt data with public key
-        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
-        
-        create_data(ecrypted_data, private_data['UserId'], 'private-data')
+        create_data(data)
     else:
         update_data(data, block)
     
@@ -421,17 +399,10 @@ def furniture_shop_data_input(block=None):
         'public': public_data
     }
 
-    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        enc_time=time.time()
-        # encrypt data with public key
-        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
-       
-        
-        create_data(ecrypted_data, private_data['UserId'], 'private-data')
+        create_data(data)
     else:
         update_data(data, block)
     
@@ -471,17 +442,10 @@ def customer_data_input(block=None):
         'public': public_data
     }
 
-    data = json.dumps(data)
     # if block is none then this fuction will used to take input and create new data
     # else block has some value then this fuction will used to take input and update existing data
     if(block is None):
-        enc_time=time.time()
-        # encrypt data with public key
-        ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        print("\nTime to encrypt data with owner's private key :", (time.time()-enc_time))
-       
-
-        create_data(ecrypted_data, private_data['UserId'], 'private-data')
+        create_data(data)
     else:
         update_data(data, block)
     # 
@@ -490,25 +454,45 @@ def customer_data_input(block=None):
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
-def create_data(ecrypted_data, user_id, privacy_type):
-
-    # generate hash b using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
-    pointer = digest(ecrypted_data).hex()
-
-    dht_time=time.time()
-    # store data on dht node
-    dht_manager.set_value(pointer, ecrypted_data)
-    dht_end_time = time.time() - dht_time
-    # Just DHT time to store data without any other e.g decryption and blockchain
-    print("\nTime to store data on dht (without encryption and blockchain):", dht_end_time)
+def create_data(data):
+    encryption_method = ''
+    # choose encryption method
+    while len(encryption_method) == 0:
+        encryption_method = input("choose encryption method symmetric/asymmetric?")
     
-    blockchain_time=time.time()
+    #take user id from private data
+    user_id = data['private']['UserId']
+    
+    encrypted_data = ''
+
+    # if user choose asymmetric encryption option
+    if(encryption_method == 'asymmetric'):
+        # encrypt data with public key
+        encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+        encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
+
+    # if user choose symmetric encryption option
+    elif(encryption_method=='symmetric'):
+        # encrypt data with symmetric key
+        encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
+        # encrypt symmetric key with owner's public key
+        encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
+        # create data object with symmetric data and symmetric key
+        encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
+    else:
+        print('Invalid encryption method')
+        return None
+
+    # generate hash using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
+    pointer = digest(encrypted_data).hex()
+    
+    # store data on dht node
+    dht_manager.set_value(pointer, encrypted_data)
+    
     # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
-    blockChainManager.new_transaction(pointer, user_id, privacy_type)
+    blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name)
     # mine unconfirmed transactions and announce block to all peers
     result = blockChainManager.mine_unconfirmed_transactions()
-    # just blockchain time to store pointer
-    print("\nTime to store pointer on blockchain (without dht and encryption):", (time.time()-blockchain_time))
     
     print(result)
     return result
@@ -529,16 +513,40 @@ def read_data():
     print("\nTime to read blockchain without dht and decryption:", (time.time()-s_time))
     
     if(block is not None):
-        data = decrypt_block_content(block)
+        # take data owner name from block meta data
+        owner_name = block['meta-data']['client-name']
+        
+        try:
+            # current peer information
+            peer = [{"client_address": my_endpoint, "client_name": client_name}]
+
+            # if data owner is not current user then look for owner endpoint from peer_list
+            if client_name != owner_name:
+                # get one peer endpoint from peer_list
+                peer = [p for p in peer_list if p['client_name'] == owner_name]
+
+            if len(peer) > 0:
+                headers = {'Content-Type': "application/json"}
+                # send data read request to owner to decrypt data
+                response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
+                    data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
+                if response.ok:
+                    # print data that is returned
+                    print(response.json())
+                else:
+                    print('Failed to read data')
+            else:
+                print(owner_name + ' peer is unavailable.')
+                return None
+        except:
+            print('Unable to read data')
+            print(owner_name + ' peer might be unavailable.')
+            return None
+
         total_read_time = (time.time()-s_time)
         # calculate end time to read data 
         print("\nTotal read time (includes: blockchain, dht, decryption) is :", total_read_time)
         
-        if data is not None:
-            print(data)
-            return block
-        else:
-            return None
     else:
         print('block not found')
         return None
@@ -566,94 +574,51 @@ def delete_data(block):
     print('Data deleted on DHT.')
 
 def decrypt_block_content(block):
-    if(block is not None):
-        dht_time = time.time()
-
-        # extract pointer from block object
-        pointer = block['data']
-        # read metadata from block
-        meta_data = block['meta-data']
     
-        # get block privacy type e.g private, sensitive or public
-        privacy_type = meta_data['privacy-type']
-        
-        
-        # retrieve data from dht against provided pointer
-        dht_data = dht_manager.get_value(pointer)
-        print("\nTime to read dht data (without blockchain and decryption):", (time.time()-dht_time))
-        
-        decryption_time=time.time()
+    # extract pointer from block object
+    pointer = block['data']
 
-        # check if current role is valid to access block based on privacy type (private data, public data, privacy-sensitive data)
-        if(rbac.verify_privacy(client_role, privacy_type) == False):
-            print('You are not authorized to access this data.')
-            return None
+    # read metadata from block
+    meta_data = block['meta-data']
 
-        # check if dht_data is deleted then retun None
-        if(dht_data == 'DELETED'):
-            print('DHT data is deleted.')
-            return None
+    # get block privacy type e.g private, sensitive or public
+    privacy_type = meta_data['privacy-type']
+    
+    # retrieve data from dht against provided pointer
+    dht_data = dht_manager.get_value(pointer)
 
-        elif dht_data is not None:
-            decrypted_data = None
-            # convert to json (public and sensitive data)
-            if(privacy_type != 'private-data'):
-                dht_data = json.loads(dht_data)
-            
-            if(privacy_type == 'private-data'):
-                # decrypt dht data with owner's private key
-                decrypted_data = encryptionManager.decrypt(dht_data, encryptionManager.private_key)
-                print("Data is decrypted using owner's private key")
-
-            elif(privacy_type == 'public-data'):
-                # retrive sender's public key
-                sender_key = get_key(dht_data['signer'])
-                # verify signature and data using signer's public key
-                isSignVerified = encryptionManager.verify_sign(dht_data['public-data'],dht_data['signature'], sender_key)
-                
-                # verify ring signature
-                isRingVerified = ring_manager.verify(dht_data['public-data'], dht_data['ring-sign'])
-                # isSignVerified -> signature created by using owner's private key
-                # isRingVerified -> ring signature
-                if isSignVerified == True and isRingVerified == True:
-                    decrypted_data = dht_data['public-data']
-                
-
-            # if data is encrypted with public key then decrypt data with receiver's private key (or business partner)
-            elif('asymmetric-data' in dht_data):
-                # verify ring signature
-                isRingVerified = ring_manager.verify(dht_data['asymmetric-data'], dht_data['ring-sign'])
-                if(isRingVerified==True):
-                    # decrypt asymmetric data by using receiver's private key
-                    decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)                    
-                    print("Data is decrypted using receivers's private key")
-
-            # if data is encrypted with symmetric key (for business partner)
-            elif('symmetric-data' in dht_data):
-                # verify ring signature
-                isRingVerified = ring_manager.verify(dht_data['symmetric-data'], dht_data['ring-sign'])
-                if(isRingVerified == True):
-                    # ask user to enter symetric key which is sent to through endpoint
-                    symmmetric_key = input("Enter symmmetric key to decrypt block: ")
-
-                    # decrypt data by using symmetric key
-                    decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], symmmetric_key)
-                    print("Data is decrypted using symmetric key")
-            
-            print("\nTime to decrypt dht data excluding dht and blockchain:", (time.time()-decryption_time))
-            print("\nTime to read dht data (with decryption):", (time.time()-dht_time))
-            
-            if decrypted_data is not None:
-                if(type(decrypted_data) is str):
-                    return json.loads(decrypted_data)
-                else:
-                    return decrypted_data
-            else:
-                return None
-
-    else:
-        print('block not found')
+    # check if current role is valid to access block based on privacy type (private data, public data, privacy-sensitive data)
+    if(rbac.verify_privacy(client_role, privacy_type) == False):
+        print('You are not authorized to access this data.')
         return None
+
+    # check if dht_data is deleted then retun None
+    if(dht_data == 'DELETED'):
+        print('DHT data is deleted.')
+        return None
+
+    elif dht_data is not None:
+        decrypted_data = None
+        dht_data = json.loads(dht_data)
+        
+        # if data is encrypted with public key then decrypt data with owner's private key
+        if('asymmetric-data' in dht_data):
+            decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)                    
+            print("Data is decrypted using owner's private key")
+            
+        # if data is encrypted with symmetric key
+        elif('symmetric-data' in dht_data):
+            # decrypt symmetric key with owner's private key
+            decrypted_symmetric_key = encryptionManager.decrypt(dht_data['symmetric-key'], encryptionManager.private_key)                    
+            
+            # decrypt data by using symmetric key
+            decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], decrypted_symmetric_key)
+            print("Data is decrypted using symmetric key")
+
+        if decrypted_data is not None:
+            return decrypted_data
+        else:
+            return None
 
 # get public key of receiver using endpoing '/public_key'
 def get_key(client):
@@ -673,142 +638,6 @@ def get_key(client):
         print(client + ' peer is offline.')
         return None
 
-# this method will be called by sender to share data 
-# call '/shared_data' endpoint of receiver to share data
-def send_message(client, message):
-    try:
-        # find peer from peer_list
-        peer = [p for p in peer_list if p['client_name'] == client]
-        if len(peer) > 0:
-            # send shared data block number to receiver
-            requests.post(peer[0]['client_address']+ "/shared_data", data=message)
-        else:
-            print(client + ' peer is offline.')
-    except:
-        print('Failed to send message')
-
-# this method will be used to share data with other actors and roles
-def share_data(blockNo, shareWithClients, shareWithRoles):
-    # find block from blockchain by block no
-    block = blockChainManager.findblock(blockNo)
-
-    # access meta data from block
-    meta_data = block['meta-data']
-    
-    # get block privacy type e.g private, sensitive or public from this metadata
-    privacy_type = meta_data['privacy-type']
-
-    if(privacy_type != 'private-data'):
-        print('This block is already shared, it can not be shared again.')
-        return None
-        
-    # decrypt block
-    data = decrypt_block_content(block)
-    
-    # check if data is not deleted
-    if(data is not None):
-        # read user id from private data
-        user_id = data['private']['UserId']
-        # clients with whom data will be shared
-        clients = shareWithClients.replace(' ', '').split(',')
-        share_time = time.time()
-        
-        if(shareWithRoles == 'business_partner'):
-            # there is one actor then use public key encryption
-            if(len(clients) == 1):
-                # there is only one actor
-                receiver_name = clients[0]
-                # retrieve receivers public key using endpoint ''
-                receiver_public_key = get_key(receiver_name)
-                enc_time = time.time()
-                # encrypt sensitive data with receiver's public key
-                encrypted_text = encryptionManager.encrypt(data['sensitive'], receiver_public_key)
-                print("Data is encrypted using receiver's public key")
-                # create ring signature for business partner data
-                ring_sign = ring_manager.sign(encrypted_text)
-                print("\nTime to encrypt data and create ring signature for one user:", (time.time()-enc_time))
-
-                # create object which will contain encrypted text
-                data = json.dumps({'asymmetric-data': encrypted_text, "ring-sign":ring_sign})
-
-                # store data with privacy type as 'sensitive-data'. e.g block 2 is mined
-                blockNo = create_data(data, user_id, 'sensitive-data')
-                
-                # create msg object which will contain block
-                msg = json.dumps(
-                    {'block': blockNo})
-                
-                # send block number to receiver through enndpoint, eng block 2 is mined
-                send_message(receiver_name, msg)
-
-            # for multiple receiver's use symmetric encryption and public key encryption
-            elif(len(clients) > 1):
-                enc_time = time.time()
-                # encrypt sensitive data with symmetric key and return (encrypted data and symmetric key)
-                encrypted_text, symmetric_key = encryptionManager.symetric_encrypt(data['sensitive'])
-                print("Data is encrypted using symmetric key")
-                # create ring signature for business partner data
-                ring_sign = ring_manager.sign(encrypted_text)
-                print("\nTime to encrypt data with symmertic key and create ring signature for multiple user:", (time.time()-enc_time))
-                
-                # create object which will contain encrypted text
-                data = json.dumps({'symmetric-data': encrypted_text, "ring-sign":ring_sign})
-
-                # store data with privacy type as 'sensitive-data'
-                blockNo = create_data(data, user_id, 'sensitive-data')
-
-                # iterate all clients to send block number and symmetric key
-                for client in clients:
-                    try:
-                        # remove empty spaces from client name
-                        client = client.strip()
-
-                        # retrieve receiver's public key
-                        receiver_public_key = get_key(client)
-
-                        # encrypt symmetric key with receiver's public keyusing signer's private key and all public keys of other peers
-                        encrypted_key = encryptionManager.encrypt(symmetric_key, receiver_public_key)
-                        print("symmetric key is encrypted with receiver's public key")
-                        # create msg object which contains block no and symmetric key
-                        msg = json.dumps(
-                            {'block': blockNo, 'symmetric_key': encrypted_key})
-                        
-                        # send block number and symmetric key to receiver
-                        send_message(client, msg)
-                    except:
-                        print('Failed to shared key with ' + client)
-                
-        elif(shareWithRoles == 'public_user'):
-            enc_time = time.time()
-            # create sign with owner's private key
-            signature = encryptionManager.create_sign(data['public'], encryptionManager.private_key)
-            # create ring signature for public user data
-            ring_sign = ring_manager.sign(data['public'])
-            # to display ring signature
-            # print(ring_sign)
-            print("\nTime to create owner's private key signature and ring signature for public user:", (time.time()-enc_time))
-            
-            # create object which will contain signature, public data and signer name
-            data = json.dumps({'signature': signature, 'public-data':data['public'], 
-                'signer':client_name, 'ring-sign':ring_sign})
-            
-
-            # store data with privacy type as 'public-data'  data on DHT and pointer on blokchain 
-            blockNo = create_data(data, user_id, 'public-data')
-            
-            # create msg object which will contain block
-            msg = json.dumps({'block': blockNo})
-            
-            # iterate all clients to send block number and symmetric key
-            for client in clients:
-                try:
-                    # send block number and symmetric key to receiver
-                    send_message(client, msg)
-                except:
-                    print('Failed to share key with ' + client)
-        
-        print("\nTime to share data with encryption, ring signature, with data replication on blockchain (excluding  reading time):", (time.time()-share_time))
-
 def display_menu():
     def print_menu():
         print(30 * "-", client_name, " - ", client_role, 30 * "-")
@@ -816,7 +645,6 @@ def display_menu():
         print("2. Read data ")
         print("3. Update data ")
         print("4. Delete data ")
-        print("5. Share Data ")
         print("6. Display Messages ")
         print("7. Display peers ")
         print("0. Exit ")
@@ -900,33 +728,6 @@ def display_menu():
 
             else:
                 print('You are not authorized to perform this action.')
-            
-        elif choice == '5':
-            # share data
-            # verify permission
-            if(rbac.verify_permission(client_role, 'share', 'blockchain')):
-                
-                blockNo = ''
-                shareWithActors = ''
-                shareWithRoles = ''
-                while len(blockNo) == 0:
-                    blockNo = input("Enter block# to share: ")
-                while len(shareWithActors) == 0:
-                    shareWithActors = input(
-                        "Write actor names you want to share data (i.e {0}): ".format(rbac.client_names))
-                while len(shareWithRoles) == 0:
-                    shareWithRoles = input(
-                        "Do you want to share data with business_partner or public_user ?")
-                # calculate start time for share data
-                start_time = time.time()
-                # share data to users
-                share_data(blockNo, shareWithActors, shareWithRoles)
-                end_time = time.time()
-                print("\nOverall time to share data is :", (end_time-start_time))
-                
-            else:
-                print('You are not authorized to perform this action.')
-            loop = True
 
         elif choice == '6':
             # display message
@@ -953,7 +754,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
     parser.add_argument('-c', '--client', default='furniture_shop', help='Enter client name')
-    parser.add_argument('-r', '--role', default='business_partner', help='Enter role name')
+    parser.add_argument('-r', '--role', default='owner', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port
