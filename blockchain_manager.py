@@ -167,9 +167,18 @@ class BlockchainManager:
     def findblock(self, index):
         index = int(index)
         if index > len(self.blockchain.chain)-1 or index < 0:
+            print('block not found')
             return None
         block = self.blockchain.block_at_index(index)
         return json.loads(block.transactions[0])
+
+    # function to ask block number from user and find it in blockchain
+    def readblock(self):
+        blockNo = ''
+        while len(blockNo) == 0:
+            blockNo = input("Please enter block number: ")
+        
+        return (blockNo, self.findblock(blockNo))
 
     # function to store data (pointer and metadata) on blockchain
     def new_transaction(self, pointer, user_id, privacy_type, client_name):
