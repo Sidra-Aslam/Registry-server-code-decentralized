@@ -90,6 +90,8 @@ def peers():
 @app.route('/chain/<block_no>', methods=['POST']) # route mapping with post and block number (for request data)
 def chain(block_no=None):
     global blockChainManager
+    global peer_list
+
     # return blockchain copy
     if request.method == 'GET' and block_no is None:
         chain_data = []
@@ -108,18 +110,31 @@ def chain(block_no=None):
         # decrypt data
         data = decrypt_block_content(block)
         
-        # role is owner return complete data
-        if requester['role'] == 'owner':
-            return jsonify(data)
-        # role is business partner, return sensitive and public data
-        elif requester['role'] == 'business_partner':
-            # remove private data from data object and share privacy-sensitive and public data
+
+        # role is public user
+        if requester['role'] == 'public_user':
+            data = data['public']
+
+        # role is business partner or role is owner of other company
+        elif requester['role'] == 'business_partner' or (requester['role'] == 'owner' and requester['name'] != client_name):
+            # remove private data from data object
             del data['private']
-            return jsonify(data)
-        # role is public user, return public data only
-        elif requester['role'] == 'public_user':
-            return jsonify(data['public'])
         
+        # current peer information
+        peer = [{"client_address": my_endpoint, "client_name": client_name, 'public_key': encryptionManager.public_key}]
+        
+        # clinet_name is a current login user. and requester is a user who reads data
+        # if data owner is not current user then look for owner endpoint from peer_list
+        if client_name != requester['name']:
+            # get one peer endpoint from peer_list to find out data requester's enspoint 
+            peer = [p for p in peer_list if p['client_name'] == requester['name']]
+        
+        if len(peer) > 0:
+            requester_public_key = peer[0]['public_key']
+            # encrypt data with requester's public key
+            encrypted_data = encryptionManager.encrypt(data, requester_public_key)
+            return jsonify(encrypted_data)
+
     # post method, this will be called by other clients to replicate data on other BC nodes after mining
     elif request.method == 'POST':
         block_data = request.get_json()
@@ -501,15 +516,11 @@ total_read_time = 0
 # read data 
 # this function will return block
 def read_data():
-    blockNo = ''
-    while len(blockNo) == 0:
-        blockNo = input("Please enter block number to display: ")
-    
     # calculate start time to read data 
     s_time = time.time()
     
     # find block
-    block = blockChainManager.findblock(blockNo)
+    blockNo, block = blockChainManager.readblock()
     print("\nTime to read blockchain without dht and decryption:", (time.time()-s_time))
     
     if(block is not None):
@@ -531,8 +542,11 @@ def read_data():
                 response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
                     data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
                 if response.ok:
+                    encrypted_text = response.json()
+                    # decrypte data with requester's/reader private key
+                    plain_text = encryptionManager.decrypt(encrypted_text, encryptionManager.private_key)
                     # print data that is returned
-                    print(response.json())
+                    print(plain_text)
                 else:
                     print('Failed to read data')
             else:
@@ -552,17 +566,34 @@ def read_data():
         return None
 
 def update_data(data, block):
+    encryption_method = ''
+    # choose encryption method
+    while len(encryption_method) == 0:
+        encryption_method = input("choose encryption method symmetric/asymmetric?")
+    
+    # if user choose asymmetric encryption option
+    if(encryption_method == 'asymmetric'):
+        # encrypt data with public key
+        encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+        encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
+
+    # if user choose symmetric encryption option
+    elif(encryption_method=='symmetric'):
+        # encrypt data with symmetric key
+        encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
+        # encrypt symmetric key with owner's public key
+        encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
+        # create data object with symmetric data and symmetric key
+        encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
+    else:
+        print('Invalid encryption method')
+        return None
+
     # extract pointer from existing block
     pointer = block['data']
-    enc_time=time.time()
-    # encrypt data with public key
-    ecrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-    
-    dht_time=time.time()
+
     # store data on dht node
-    dht_manager.set_value(pointer, ecrypted_data)
-    print("\nTime to update data without encryption on dht without blockchain:", (time.time()-dht_time))
-    print("\nTime to update data with encryption on dht without blockchain:", (time.time()-enc_time))
+    dht_manager.set_value(pointer, encrypted_data)
     
     print('data updated')
 
@@ -692,10 +723,15 @@ def display_menu():
             # verify permission
             if(rbac.verify_permission(client_role, 'update', 'blockchain')):
                 # read block
-                block = read_data()
+                blockNo, block = blockChainManager.readblock()
+                
+                  
                 # if block found then take new input from user to update data
                 if(block is not None):
-                    if(client_name == 'wood_cutter'):
+                    # check if current user is not owner of this data
+                    if block['meta-data']['client-name'] != client_name:
+                        print('You can not modify this data.')
+                    elif(client_name == 'wood_cutter'):
                         wood_cutter_data_input(block)
                     elif(client_name == 'transporter'):
                         transporter_data_input(block)
@@ -716,16 +752,19 @@ def display_menu():
              # verify permission
             if(rbac.verify_permission(client_role, 'delete', 'blockchain')):
                 # read block
-                block = read_data()
+                blockNo, block = blockChainManager.readblock()
+                
                 if(block is not None):
-                    # calculate start time for delete data
-                    delete_time = time.time()
-                    delete_data(block)
-                    just_delete_time = (time.time()-delete_time)
-                    print("\nJust DHT time to delete data:", just_delete_time)
-                    print("\Total time to delete data (read, decryption, RBAC, DHt delete):", (just_delete_time + total_read_time))
-                    
-
+                    # check if current user is not owner of this data
+                    if block['meta-data']['client-name'] != client_name:
+                        print('You can not modify this data.')
+                    else:
+                        # calculate start time for delete data
+                        delete_time = time.time()
+                        delete_data(block)
+                        just_delete_time = (time.time()-delete_time)
+                        print("\nJust DHT time to delete data:", just_delete_time)
+                        print("\Total time to delete data (read, decryption, RBAC, DHt delete):", (just_delete_time + total_read_time))
             else:
                 print('You are not authorized to perform this action.')
 
