@@ -179,7 +179,7 @@ class BlockchainManager:
             blockNo = input("Please enter block number: ")
         
         return (blockNo, self.findblock(blockNo))
-
+    
     # function to store data (pointer and metadata) on blockchain
     def new_transaction(self, pointer, user_id, privacy_type, client_name):
         dataObj = {

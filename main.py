@@ -133,7 +133,10 @@ def chain(block_no=None):
             requester_public_key = peer[0]['public_key']
             # encrypt data with requester's public key
             encrypted_data = encryptionManager.encrypt(data, requester_public_key)
-            return jsonify(encrypted_data)
+            # create ring signature of encrypted dtaa
+            sign = ring_manager.sign(encrypted_data)
+            # return signature and encrypted data to requester
+            return jsonify({'sign':sign,'data':encrypted_data})
 
     # post method, this will be called by other clients to replicate data on other BC nodes after mining
     elif request.method == 'POST':
@@ -542,11 +545,15 @@ def read_data():
                 response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
                     data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
                 if response.ok:
-                    encrypted_text = response.json()
-                    # decrypte data with requester's/reader private key
-                    plain_text = encryptionManager.decrypt(encrypted_text, encryptionManager.private_key)
-                    # print data that is returned
-                    print(plain_text)
+                    # response object return by owner
+                    response_object = response.json()
+                    # verify ring signature
+                    isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
+                    if(isVerified is True):
+                        # decrypte data with requester's/reader private key
+                        plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
+                        # print data that is returned
+                        print(plain_text)
                 else:
                     print('Failed to read data')
             else:
