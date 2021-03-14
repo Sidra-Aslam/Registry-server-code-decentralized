@@ -131,6 +131,7 @@ def chain(block_no=None):
         
         if len(peer) > 0:
             requester_public_key = peer[0]['public_key']
+            print('Asymmetric data encryption with requesters public key while data read request')
             # encrypt data with requester's public key
             encrypted_data = encryptionManager.encrypt(data, requester_public_key)
             # create ring signature of encrypted dtaa
@@ -233,8 +234,6 @@ def transporter_data_input(block=None):
     # take public data from actor
     while len(public_data['DeliveryDate']) == 0:
         public_data['DeliveryDate'] = input("Delivery date: ")
-    # declare varible to calculate create and store data starting time
-    start_time = time.time()
 
     # create data object
     data = {
@@ -249,8 +248,6 @@ def transporter_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    # complete create and store data time 
-    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for wood_cutter actor
 def wood_cutter_data_input(block=None):
@@ -276,8 +273,6 @@ def wood_cutter_data_input(block=None):
     # take other data from actor
     while len(public_data['WoodType']) == 0:
         public_data['WoodType'] = input("Wood Type: ")
-    
-    start_time = time.time()
 
     # create data object
     data = {
@@ -292,8 +287,6 @@ def wood_cutter_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-
-    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
 
 # data input function for warehouse_storage actor
 def warehouse_storage_data_input(block=None):
@@ -324,8 +317,6 @@ def warehouse_storage_data_input(block=None):
     while len(public_data['Processed']) == 0:
         public_data['Processed'] = input("Processed (Yes/No): ")
 
-    start_time = time.time()
-
     # create data object
     data = {
         'private': private_data,
@@ -339,8 +330,6 @@ def warehouse_storage_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    
-    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for furniture_assembly actor
 def furniture_assembly_data_input(block=None):
@@ -367,8 +356,6 @@ def furniture_assembly_data_input(block=None):
     while len(public_data['FurnitureName']) == 0:
         public_data['FurnitureName'] = input("Furniture Name: ")
 
-    start_time = time.time()
-
     # create data object
     data = {
         'private': private_data,
@@ -382,8 +369,6 @@ def furniture_assembly_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    
-    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for furniture_assembly actor
 def furniture_shop_data_input(block=None):
@@ -408,8 +393,6 @@ def furniture_shop_data_input(block=None):
     while len(public_data['FurnitureQuality']) == 0:
         public_data['FurnitureQuality'] = input("Furniture quality: ")
 
-    start_time = time.time()
-
     # create data object
     data = {
         'private': private_data,
@@ -423,8 +406,6 @@ def furniture_shop_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    
-    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
     
 # data input function for customer actor
 def customer_data_input(block=None):
@@ -451,8 +432,6 @@ def customer_data_input(block=None):
     while len(sensitive_data['Style']) == 0:
         sensitive_data['Style'] = input("Style: ")
 
-    start_time = time.time()
-
     # create data object
     data = {
         'private': private_data,
@@ -466,9 +445,7 @@ def customer_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    # 
-    print("\nTotal time to create / update data with dht, blockchain and encryption is :", (time.time()-start_time))
-    
+
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
@@ -478,6 +455,8 @@ def create_data(data):
     while len(encryption_method) == 0:
         encryption_method = input("choose encryption method symmetric/asymmetric?")
     
+    start_time = time.time()
+
     #take user id from private data
     user_id = data['private']['UserId']
     
@@ -485,18 +464,22 @@ def create_data(data):
 
     # if user choose asymmetric encryption option
     if(encryption_method == 'asymmetric'):
+        print('Data encrypt with owners public key while creating data')
         # encrypt data with public key
         encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
         encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
 
     # if user choose symmetric encryption option
     elif(encryption_method=='symmetric'):
+        print('Data encrypt with symmetric key while creating data')
         # encrypt data with symmetric key
         encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
+        print('Encrypt symmetric key with owner public key while creating data')
         # encrypt symmetric key with owner's public key
         encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
         # create data object with symmetric data and symmetric key
         encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
+
     else:
         print('Invalid encryption method')
         return None
@@ -506,11 +489,17 @@ def create_data(data):
     
     # store data on dht node
     dht_manager.set_value(pointer, encrypted_data)
-    
+
+    # blockchain start time
+    bc_start_time = time.time()
+
     # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
     blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name)
     # mine unconfirmed transactions and announce block to all peers
     result = blockChainManager.mine_unconfirmed_transactions()
+    
+    print("\nTime to store pointer on blockchain without dht and decryption:", (time.time()-bc_start_time))
+    print("\nOverall time to create data (with encryption, dht, blockchain):", (time.time()-start_time))
     
     print(result)
     return result
@@ -519,12 +508,12 @@ total_read_time = 0
 # read data 
 # this function will return block
 def read_data():
-    # calculate start time to read data 
-    s_time = time.time()
     
     # find block
     blockNo, block = blockChainManager.readblock()
-    print("\nTime to read blockchain without dht and decryption:", (time.time()-s_time))
+    
+    # calculate start time to read data 
+    start_time = time.time() + blockChainManager.find_block_time
     
     if(block is not None):
         # take data owner name from block meta data
@@ -540,18 +529,27 @@ def read_data():
                 peer = [p for p in peer_list if p['client_name'] == owner_name]
 
             if len(peer) > 0:
+                # data read request time
+                req_time = time.time()
                 headers = {'Content-Type': "application/json"}
                 # send data read request to owner to decrypt data
                 response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
                     data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
+                
                 if response.ok:
                     # response object return by owner
                     response_object = response.json()
+                    print("\nData request time (time taken by owner to decrypt, create ring and return data):", (time.time()-req_time))
+                
                     # verify ring signature
                     isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
                     if(isVerified is True):
+                        print('Data decryption time with requesters public key when data is returned from owner')
                         # decrypte data with requester's/reader private key
                         plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
+                        
+                        print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", (time.time()-start_time))
+                        
                         # print data that is returned
                         print(plain_text)
                 else:
@@ -563,11 +561,6 @@ def read_data():
             print('Unable to read data')
             print(owner_name + ' peer might be unavailable.')
             return None
-
-        total_read_time = (time.time()-s_time)
-        # calculate end time to read data 
-        print("\nTotal read time (includes: blockchain, dht, decryption) is :", total_read_time)
-        
     else:
         print('block not found')
         return None
@@ -578,16 +571,21 @@ def update_data(data, block):
     while len(encryption_method) == 0:
         encryption_method = input("choose encryption method symmetric/asymmetric?")
     
+    start_time = time.time()
+
     # if user choose asymmetric encryption option
     if(encryption_method == 'asymmetric'):
+        print('Data encrypt with owners public key while updating data')
         # encrypt data with public key
         encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
         encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
 
     # if user choose symmetric encryption option
     elif(encryption_method=='symmetric'):
+        print('Data encrypt with symmetric key while updating data')
         # encrypt data with symmetric key
         encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
+        print('Encrypt symmetric key with owner public key while updating data')
         # encrypt symmetric key with owner's public key
         encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
         # create data object with symmetric data and symmetric key
@@ -602,13 +600,18 @@ def update_data(data, block):
     # store data on dht node
     dht_manager.set_value(pointer, encrypted_data)
     
+    print("\nOverall time to update data (with encryption, dht):", (time.time()-start_time))
+    
     print('data updated')
 
 def delete_data(block):
+    start_time = time.time()
     # extract pointer from existing block
     pointer = block['data']
     # 'DELETED' will identify that data is deleted
     dht_manager.set_value(pointer, 'DELETED')
+    print("\nOverall time to delete data on dht:", (time.time()-start_time)+blockChainManager.find_block_time)
+    
     print('Data deleted on DHT.')
 
 def decrypt_block_content(block):
@@ -641,14 +644,16 @@ def decrypt_block_content(block):
         
         # if data is encrypted with public key then decrypt data with owner's private key
         if('asymmetric-data' in dht_data):
+            print('Asymmetric decryption time with owner key while data read request')
             decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)                    
             print("Data is decrypted using owner's private key")
             
         # if data is encrypted with symmetric key
         elif('symmetric-data' in dht_data):
+            print('Symmetric key decryption with owners public key while data read request')
             # decrypt symmetric key with owner's private key
             decrypted_symmetric_key = encryptionManager.decrypt(dht_data['symmetric-key'], encryptionManager.private_key)                    
-            
+            print('Symmetric data decryption with symmetric key while data read request')
             # decrypt data by using symmetric key
             decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], decrypted_symmetric_key)
             print("Data is decrypted using symmetric key")
@@ -683,8 +688,7 @@ def display_menu():
         print("2. Read data ")
         print("3. Update data ")
         print("4. Delete data ")
-        print("6. Display Messages ")
-        print("7. Display peers ")
+        print("5. Display peers ")
         print("0. Exit ")
         print(73 * "-")
 
@@ -753,7 +757,6 @@ def display_menu():
             else:
                 print('You are not authorized to perform this action.')
 
-
         elif choice == '4':
             # delete data
              # verify permission
@@ -766,20 +769,11 @@ def display_menu():
                     if block['meta-data']['client-name'] != client_name:
                         print('You can not modify this data.')
                     else:
-                        # calculate start time for delete data
-                        delete_time = time.time()
                         delete_data(block)
-                        just_delete_time = (time.time()-delete_time)
-                        print("\nJust DHT time to delete data:", just_delete_time)
-                        print("\Total time to delete data (read, decryption, RBAC, DHt delete):", (just_delete_time + total_read_time))
             else:
                 print('You are not authorized to perform this action.')
 
-        elif choice == '6':
-            # display message
-            print(messages)
-            loop=True
-        elif choice == '7':
+        elif choice == '5':
             # display available peers
             for peer in peer_list:
                 print("client address: ", peer['client_address'])
@@ -787,6 +781,7 @@ def display_menu():
                 print(60 * "-")
                 
             loop=True
+        
         elif choice == '0':
             unregister()
             print("Exiting..")

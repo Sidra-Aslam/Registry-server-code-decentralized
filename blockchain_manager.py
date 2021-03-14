@@ -165,11 +165,15 @@ class BlockchainManager:
                 
     # function to find block on given index
     def findblock(self, index):
+        start_time=time.time()
         index = int(index)
         if index > len(self.blockchain.chain)-1 or index < 0:
             print('block not found')
             return None
         block = self.blockchain.block_at_index(index)
+        self.find_block_time = time.time()-start_time
+        print("\nJust blockchain time to read pointer/block:", (self.find_block_time))
+    
         return json.loads(block.transactions[0])
 
     # function to ask block number from user and find it in blockchain

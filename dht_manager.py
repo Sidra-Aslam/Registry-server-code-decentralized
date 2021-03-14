@@ -55,8 +55,13 @@ class DhtManager:
             self.loop.close()
 
     def get_value(self, key):
+        start_time = time()
         value = self.loop.run_until_complete(self.dht_node.get(key))
+        print("\nJust dht time to read data from dht:", (time()-start_time))        
         return value
 
     def set_value(self, key, value):
+        start_time = time()
         self.loop.run_until_complete(self.dht_node.set(key, value))
+        print("\nJust dht time to store data on dht:", (time()-start_time))
+    

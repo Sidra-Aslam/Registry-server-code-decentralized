@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa,padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.fernet import Fernet
-
+from time import time
 class EncryptionManager:
    private_key = None
    public_key = None
@@ -36,6 +36,7 @@ class EncryptionManager:
       
       
    def encrypt(self, data, pub_key):
+      start_time = time()
       # convert data object to json string
       data = json.dumps(data).encode('ascii')
       
@@ -48,12 +49,14 @@ class EncryptionManager:
       encrypted = public_key.encrypt(data, 
       padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), 
       algorithm=hashes.SHA256(), label=None))
-      
+      print("\nAsymmetric encryption time:", (time()-start_time))
+
       # return encrypted data
       return encrypted.hex()
 
    def decrypt(self, encrypted, pvt_key):
       try:
+         start_time = time()
          # convert key string back to original object
          private_key = serialization.load_pem_private_key(
             pvt_key.encode(),
@@ -67,6 +70,8 @@ class EncryptionManager:
          # return original text
          decrypted_data = json.loads(original_message)
 
+         print("\nAsymmetric decryption time:", (time()-start_time))
+      
          return decrypted_data
          
       except Exception as e:
@@ -74,6 +79,8 @@ class EncryptionManager:
          return None
 
    def symetric_encrypt(self, data):
+      start_time = time()
+
       # create symetric key
       key = Fernet.generate_key()
       
@@ -84,15 +91,20 @@ class EncryptionManager:
       
       #encrypt data with symetric key
       encrypted_text = f.encrypt(json_str).decode("utf-8")
+      print("\nSymmetric encryption time:", (time()-start_time))
+      
       return (encrypted_text, key.decode()) 
    
    def symetric_decrypt(self, cypher_text, key):
       try:
+         start_time = time()
          # create Fernet class object (Fernet is used for symetric algorithm)
          f = Fernet(key)
          
          # decrypt data
          plain_text = f.decrypt(cypher_text.encode('ascii'))
+         print("\nSymmetric decryption time:", (time()-start_time))
+      
          # return plain text in json format
          return json.loads(plain_text.decode("utf-8"))
       except Exception as e:
