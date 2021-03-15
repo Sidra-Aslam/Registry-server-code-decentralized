@@ -21,7 +21,16 @@ pip install -r requirements.txt
     PEER1: python main.py --port 8060 --client wood_cutter --role owner
     PEER2: python main.py --port 8062 --client transporter --role business_partner
     ```
+## Prototype introduction
+when any actor will be connected to the registry server then he will try to connect to any other available peer to copy blockchain.
+Data create: To create/store the data on DHT, the current login actor (data owner) has 2 options to encrypt data (symmetric/asymmetric).
+if owner chooses the asymmetric option then data will be encrypted with the owner's public key and stored on DHT.
+if owner chooses the symmetric option then data will be encrypted with a symmetric key and the symmetric key again will be encrypted with the owner's public key, and then both (encrypted symmetric key + encrypted data) will be stored on DHT. Pointer + metatada and actor's name(data owner) will be stored on Blockchain.
 
+Data read: when any other actor reads data, then our prototype will read block from his local blockchain copy and check for the data owner from metadata.
+Then, a request is sent to the data owner through '/chain/xyz' --> block no endpoint. Owner will read the data from DHT, decrypt it and sign it by using ring signature and return it to the requester. The owner will check the requester's role and then returns data based on the requester's role. 
+
+The authorized requester can read data and verify the ring signature 
 ## Menu options
 
 1. Create data
