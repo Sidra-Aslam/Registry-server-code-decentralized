@@ -1,7 +1,7 @@
+#This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 # https://github.com/jackeyGao/simple-rbac
 import rbac.acl
-import time
-
+from time import perf_counter
 class RbacManager:
     def __init__(self):
         # list of clients
@@ -30,9 +30,10 @@ class RbacManager:
         
     # this method will be used to verify permission of actions (delete,write, update, read)
     def verify_permission(self, role, operation, resource):
-        start_time = time.time()
+        start_time = perf_counter()
         result = self.acl.is_allowed(role, operation, resource) is not None
-        print("\nTime to verify permission:", (time.time()-start_time))
+        self.permission_time = (perf_counter()-start_time)
+        print("\nTime to verify permission:", format(self.permission_time, '.8f'))
         return result
         
     # this method will be used to authenticate role if it exists

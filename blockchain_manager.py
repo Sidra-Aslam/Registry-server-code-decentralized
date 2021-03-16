@@ -1,3 +1,4 @@
+#This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 from hashlib import sha256
 import json
 import time
@@ -165,14 +166,15 @@ class BlockchainManager:
                 
     # function to find block on given index
     def findblock(self, index):
-        start_time=time.time()
+        start_time=time.perf_counter()
         index = int(index)
         if index > len(self.blockchain.chain)-1 or index < 0:
             print('block not found')
+            self.find_block_time = (time.perf_counter()-start_time)
             return None
         block = self.blockchain.block_at_index(index)
-        self.find_block_time = time.time()-start_time
-        print("\nJust blockchain time to read pointer/block:", (self.find_block_time))
+        self.find_block_time = (time.perf_counter()-start_time)
+        print("\nJust blockchain time to read pointer/block:", format(self.find_block_time, '.8f'))
     
         return json.loads(block.transactions[0])
 

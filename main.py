@@ -1,3 +1,4 @@
+#This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 from operator import truediv
 from ring_manager import RingManager
 from flask import Flask, request, jsonify
@@ -13,7 +14,6 @@ from kademlia.utils import digest
 from urllib.parse import urlparse
 from time import sleep
 import time
-
 # variable to store perrs list
 peer_list = []
 # blockchain manager object
@@ -83,7 +83,7 @@ def peers():
     print('Peer list updated')
     return ('', 200)
 
-# api to return blockchain copy or replicate block on peers
+# api /chain to return blockchain copy or replicate block on peers
 # this will be called from any other client
 
 @app.route('/chain', methods=['GET', 'POST']) # route mapping with get/post request
@@ -455,7 +455,7 @@ def create_data(data):
     while len(encryption_method) == 0:
         encryption_method = input("choose encryption method symmetric/asymmetric?")
     
-    start_time = time.time()
+    start_time = time.perf_counter() + rbac.permission_time
 
     #take user id from private data
     user_id = data['private']['UserId']
@@ -491,15 +491,15 @@ def create_data(data):
     dht_manager.set_value(pointer, encrypted_data)
 
     # blockchain start time
-    bc_start_time = time.time()
+    bc_start_time = time.perf_counter()
 
     # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
     blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name)
     # mine unconfirmed transactions and announce block to all peers
     result = blockChainManager.mine_unconfirmed_transactions()
     
-    print("\nTime to store pointer on blockchain without dht and decryption:", (time.time()-bc_start_time))
-    print("\nOverall time to create data (with encryption, dht, blockchain):", (time.time()-start_time))
+    print("\nTime to store pointer on blockchain without dht and decryption:", format((time.perf_counter()-bc_start_time), '.8f'))
+    print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
     
     print(result)
     return result
@@ -513,7 +513,7 @@ def read_data():
     blockNo, block = blockChainManager.readblock()
     
     # calculate start time to read data 
-    start_time = time.time() + blockChainManager.find_block_time
+    start_time = time.perf_counter() + blockChainManager.find_block_time + rbac.permission_time
     
     if(block is not None):
         # take data owner name from block meta data
@@ -530,7 +530,7 @@ def read_data():
 
             if len(peer) > 0:
                 # data read request time
-                req_time = time.time()
+                req_time = time.perf_counter()
                 headers = {'Content-Type': "application/json"}
                 # send data read request to owner to decrypt data
                 response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
@@ -539,7 +539,7 @@ def read_data():
                 if response.ok:
                     # response object return by owner
                     response_object = response.json()
-                    print("\nData request time (time taken by owner to decrypt, create ring and return data):", (time.time()-req_time))
+                    print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
                 
                     # verify ring signature
                     isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
@@ -548,7 +548,7 @@ def read_data():
                         # decrypte data with requester's/reader private key
                         plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
                         
-                        print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", (time.time()-start_time))
+                        print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
                         
                         # print data that is returned
                         print(plain_text)
@@ -571,7 +571,7 @@ def update_data(data, block):
     while len(encryption_method) == 0:
         encryption_method = input("choose encryption method symmetric/asymmetric?")
     
-    start_time = time.time()
+    start_time = time.perf_counter()  + rbac.permission_time
 
     # if user choose asymmetric encryption option
     if(encryption_method == 'asymmetric'):
@@ -600,17 +600,17 @@ def update_data(data, block):
     # store data on dht node
     dht_manager.set_value(pointer, encrypted_data)
     
-    print("\nOverall time to update data (with encryption, dht):", (time.time()-start_time))
+    print("\nOverall time to update data (with encryption, dht):", format((time.perf_counter()-start_time), '.8f'))
     
     print('data updated')
 
 def delete_data(block):
-    start_time = time.time()
+    start_time = time.perf_counter() + rbac.permission_time
     # extract pointer from existing block
     pointer = block['data']
     # 'DELETED' will identify that data is deleted
     dht_manager.set_value(pointer, 'DELETED')
-    print("\nOverall time to delete data on dht:", (time.time()-start_time)+blockChainManager.find_block_time)
+    print("\nOverall time to delete data on dht:", format(((time.perf_counter()-start_time)+blockChainManager.find_block_time),'.8f'))
     
     print('Data deleted on DHT.')
 
@@ -700,7 +700,6 @@ def display_menu():
         choice = input("Enter your choice [1-7]: ")
 
         if choice == '1':
-            start_time = time.time()
             # create data
             # verify permission
             if(rbac.verify_permission(client_role, 'write', 'blockchain')):

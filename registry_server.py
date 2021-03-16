@@ -1,4 +1,4 @@
-
+#This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 from flask import Flask, request, jsonify
 import json
 import requests

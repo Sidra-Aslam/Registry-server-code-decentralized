@@ -1,10 +1,11 @@
+#This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 from urllib.parse import urlparse
 from kademlia.network import Server
 import asyncio
 import logging
 import nest_asyncio
 import threading
-from time import sleep, time
+from time import perf_counter
 
 class DhtManager:
     def __init__(self, port, peer_list):
@@ -55,13 +56,13 @@ class DhtManager:
             self.loop.close()
 
     def get_value(self, key):
-        start_time = time()
+        start_time = perf_counter()
         value = self.loop.run_until_complete(self.dht_node.get(key))
-        print("\nJust dht time to read data from dht:", (time()-start_time))        
+        print("\nJust dht time to read data from dht:", format((perf_counter()-start_time), '.8f'))        
         return value
 
     def set_value(self, key, value):
-        start_time = time()
+        start_time = perf_counter()
         self.loop.run_until_complete(self.dht_node.set(key, value))
-        print("\nJust dht time to store data on dht:", (time()-start_time))
+        print("\nJust dht time to store data on dht:", format((perf_counter()-start_time), '.8f'))
     
