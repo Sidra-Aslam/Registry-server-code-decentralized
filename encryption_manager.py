@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.fernet import Fernet
 from time import perf_counter
+from csv_log import CSVLogger
 class EncryptionManager:
    private_key = None
    public_key = None
@@ -49,6 +50,7 @@ class EncryptionManager:
       encrypted = public_key.encrypt(data, 
       padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), 
       algorithm=hashes.SHA256(), label=None))
+      CSVLogger.timeObj['AsymmetricEncryption'] = (perf_counter()-start_time)
       print("\nAsymmetric encryption time:", format((perf_counter()-start_time), '.8f'))
 
       # return encrypted data
@@ -69,7 +71,7 @@ class EncryptionManager:
          
          # return original text
          decrypted_data = json.loads(original_message)
-
+         CSVLogger.timeObj['AsymmetricDecryption'] = (perf_counter()-start_time)
          print("\nAsymmetric decryption time:", format((perf_counter()-start_time), '.8f'))
       
          return decrypted_data
@@ -91,6 +93,7 @@ class EncryptionManager:
       
       #encrypt data with symetric key
       encrypted_text = f.encrypt(json_str).decode("utf-8")
+      CSVLogger.timeObj['SymmetricEncryption'] = (perf_counter()-start_time)
       print("\nSymmetric encryption time:", format((perf_counter()-start_time), '.8f'))
       
       return (encrypted_text, key.decode()) 
@@ -103,6 +106,7 @@ class EncryptionManager:
          
          # decrypt data
          plain_text = f.decrypt(cypher_text.encode('ascii'))
+         CSVLogger.timeObj['SymmetricDecryption'] = (perf_counter()-start_time)
          print("\nSymmetric decryption time:", format((perf_counter()-start_time),'.8f'))
       
          # return plain text in json format

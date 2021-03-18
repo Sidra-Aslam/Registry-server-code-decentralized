@@ -14,6 +14,8 @@ from kademlia.utils import digest
 from urllib.parse import urlparse
 from time import sleep
 import time
+from csv_log import CSVLogger
+
 # variable to store perrs list
 peer_list = []
 # blockchain manager object
@@ -498,6 +500,9 @@ def create_data(data):
     # mine unconfirmed transactions and announce block to all peers
     result = blockChainManager.mine_unconfirmed_transactions()
     
+    CSVLogger.timeObj['Blockchain time'] = (time.perf_counter()-bc_start_time)
+    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+    
     print("\nTime to store pointer on blockchain without dht and decryption:", format((time.perf_counter()-bc_start_time), '.8f'))
     print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
     
@@ -539,6 +544,7 @@ def read_data():
                 if response.ok:
                     # response object return by owner
                     response_object = response.json()
+                    CSVLogger.timeObj['DataRequestTime']=(time.perf_counter()-req_time)
                     print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
                 
                     # verify ring signature
@@ -547,7 +553,7 @@ def read_data():
                         print('Data decryption time with requesters public key when data is returned from owner')
                         # decrypte data with requester's/reader private key
                         plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
-                        
+                        CSVLogger.timeObj['Overalltime'] = (time.perf_counter()-start_time)
                         print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
                         
                         # print data that is returned
@@ -599,7 +605,8 @@ def update_data(data, block):
 
     # store data on dht node
     dht_manager.set_value(pointer, encrypted_data)
-    
+
+    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
     print("\nOverall time to update data (with encryption, dht):", format((time.perf_counter()-start_time), '.8f'))
     
     print('data updated')
@@ -610,6 +617,7 @@ def delete_data(block):
     pointer = block['data']
     # 'DELETED' will identify that data is deleted
     dht_manager.set_value(pointer, 'DELETED')
+    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+blockChainManager.find_block_time
     print("\nOverall time to delete data on dht:", format(((time.perf_counter()-start_time)+blockChainManager.find_block_time),'.8f'))
     
     print('Data deleted on DHT.')
@@ -715,7 +723,10 @@ def display_menu():
                 elif(client_name == 'furniture_shop'):
                     furniture_shop_data_input()
                 elif(client_name == 'customer'):
-                    customer_data_input()    
+                    customer_data_input() 
+
+                print(CSVLogger.timeObj)
+                CSVLogger.timeObj={}   
             else:
                 print('You are not authorized to perform this action.')
             
@@ -725,6 +736,8 @@ def display_menu():
              # verify permission
             if(rbac.verify_permission(client_role, 'read', 'blockchain')):
                 read_data()
+                print(CSVLogger.timeObj)
+                CSVLogger.timeObj={}
             else:
                 print('You are not authorized to perform this action.')
             
@@ -753,6 +766,9 @@ def display_menu():
                         furniture_shop_data_input(block)
                     elif(client_name == 'customer'):
                         customer_data_input(block)
+                    
+                    print(CSVLogger.timeObj)
+                    CSVLogger.timeObj={}
             else:
                 print('You are not authorized to perform this action.')
 
@@ -769,6 +785,8 @@ def display_menu():
                         print('You can not modify this data.')
                     else:
                         delete_data(block)
+                        print(CSVLogger.timeObj)
+                        CSVLogger.timeObj={}
             else:
                 print('You are not authorized to perform this action.')
 

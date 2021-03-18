@@ -2,6 +2,7 @@
 # https://github.com/jackeyGao/simple-rbac
 import rbac.acl
 from time import perf_counter
+from csv_log import CSVLogger
 class RbacManager:
     def __init__(self):
         # list of clients
@@ -33,6 +34,7 @@ class RbacManager:
         start_time = perf_counter()
         result = self.acl.is_allowed(role, operation, resource) is not None
         self.permission_time = (perf_counter()-start_time)
+        CSVLogger.timeObj['VerifyPermission'] = self.permission_time
         print("\nTime to verify permission:", format(self.permission_time, '.8f'))
         return result
         

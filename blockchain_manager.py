@@ -4,6 +4,7 @@ import json
 import time
 from datetime import datetime
 import requests
+from csv_log import CSVLogger
 # class to define block propertities
 class Block:
     def __init__(self, index, transactions, timestamp, previous_hash, nonce=0):
@@ -174,6 +175,7 @@ class BlockchainManager:
             return None
         block = self.blockchain.block_at_index(index)
         self.find_block_time = (time.perf_counter()-start_time)
+        CSVLogger.timeObj['JustBlockchainRead'] = self.find_block_time
         print("\nJust blockchain time to read pointer/block:", format(self.find_block_time, '.8f'))
     
         return json.loads(block.transactions[0])

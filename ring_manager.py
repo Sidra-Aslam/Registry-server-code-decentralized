@@ -5,6 +5,7 @@ from ring import Ring
 import json
 import binascii
 from time import perf_counter
+from csv_log import CSVLogger
 class RingManager:
     def __init__(self, pub_key, pvt_key, peers):
         # variable to hold current user private key + public key and all other users public keys
@@ -32,6 +33,7 @@ class RingManager:
         data = json.dumps(data)
         # create signature using signer's private key which is at first index in the keys list e.g 0
         signature = self.ring.sign(data, 0)
+        CSVLogger.timeObj['CreateRing'] = (perf_counter()-start_time)
         print("\nTime to Just create ring sign:", format((perf_counter()-start_time), '.8f'))
         print('Ring signature created')
         # convert signature to string format
@@ -45,6 +47,7 @@ class RingManager:
         sign = list(map(int, signature.split(',')))
         # verify signature
         isVerified = self.ring.verify(data, sign)
+        CSVLogger.timeObj['VerifyRing'] = (perf_counter()-start_time)
         print("\nTime to Just verify ring sign:", format((perf_counter()-start_time), '.8f'))
         if(isVerified):
             print('Ring is verified')

@@ -6,7 +6,7 @@ import logging
 import nest_asyncio
 import threading
 from time import perf_counter
-
+from csv_log import CSVLogger
 class DhtManager:
     def __init__(self, port, peer_list):
         self.port = port
@@ -58,11 +58,13 @@ class DhtManager:
     def get_value(self, key):
         start_time = perf_counter()
         value = self.loop.run_until_complete(self.dht_node.get(key))
+        CSVLogger.timeObj['JustDhtRead'] = (perf_counter()-start_time)
         print("\nJust dht time to read data from dht:", format((perf_counter()-start_time), '.8f'))        
         return value
 
     def set_value(self, key, value):
         start_time = perf_counter()
         self.loop.run_until_complete(self.dht_node.set(key, value))
+        CSVLogger.timeObj['JustDhtStorage'] = (perf_counter()-start_time)
         print("\nJust dht time to store data on dht:", format((perf_counter()-start_time), '.8f'))
     
