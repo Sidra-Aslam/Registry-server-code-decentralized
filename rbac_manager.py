@@ -34,7 +34,8 @@ class RbacManager:
         start_time = perf_counter()
         result = self.acl.is_allowed(role, operation, resource) is not None
         self.permission_time = (perf_counter()-start_time)
-        CSVLogger.timeObj['VerifyPermission'] = self.permission_time
+        CSVLogger.timeObj['RbacTime'] = self.permission_time
+        
         print("\nTime to verify permission:", format(self.permission_time, '.8f'))
         return result
         

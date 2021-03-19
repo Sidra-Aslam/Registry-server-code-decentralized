@@ -175,7 +175,8 @@ class BlockchainManager:
             return None
         block = self.blockchain.block_at_index(index)
         self.find_block_time = (time.perf_counter()-start_time)
-        CSVLogger.timeObj['JustBlockchainRead'] = self.find_block_time
+        self.find_block_no = index
+        CSVLogger.timeObj['BlockchainReadTime'] = self.find_block_time
         print("\nJust blockchain time to read pointer/block:", format(self.find_block_time, '.8f'))
     
         return json.loads(block.transactions[0])

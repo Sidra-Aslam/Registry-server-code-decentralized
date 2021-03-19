@@ -16,6 +16,8 @@ from time import sleep
 import time
 from csv_log import CSVLogger
 
+test_run = 20
+
 # variable to store perrs list
 peer_list = []
 # blockchain manager object
@@ -457,119 +459,138 @@ def create_data(data):
     while len(encryption_method) == 0:
         encryption_method = input("choose encryption method symmetric/asymmetric?")
     
-    start_time = time.perf_counter() + rbac.permission_time
+    # repeat the process n times
+    for i in range(test_run):
+        CSVLogger.timeObj = {}
+        # verify permission again 
+        rbac.verify_permission(client_role, 'write', 'blockchain') # - for test run
+        
+        start_time = time.perf_counter() + rbac.permission_time
 
-    #take user id from private data
-    user_id = data['private']['UserId']
-    
-    encrypted_data = ''
+        #take user id from private data
+        user_id = data['private']['UserId']
+        
+        encrypted_data = ''
 
-    # if user choose asymmetric encryption option
-    if(encryption_method == 'asymmetric'):
-        print('Data encrypt with owners public key while creating data')
-        # encrypt data with public key
-        encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
+        # if user choose asymmetric encryption option
+        if(encryption_method == 'asymmetric'):
+            print('Data encrypt with owners public key while creating data')
+            # encrypt data with public key
+            encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+            encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
 
-    # if user choose symmetric encryption option
-    elif(encryption_method=='symmetric'):
-        print('Data encrypt with symmetric key while creating data')
-        # encrypt data with symmetric key
-        encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
-        print('Encrypt symmetric key with owner public key while creating data')
-        # encrypt symmetric key with owner's public key
-        encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
-        # create data object with symmetric data and symmetric key
-        encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
+        # if user choose symmetric encryption option
+        elif(encryption_method=='symmetric'):
+            print('Data encrypt with symmetric key while creating data')
+            # encrypt data with symmetric key
+            encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
+            print('Encrypt symmetric key with owner public key while creating data')
+            # encrypt symmetric key with owner's public key
+            encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
+            # create data object with symmetric data and symmetric key
+            encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
 
+        else:
+            print('Invalid encryption method')
+            return None
+
+        # generate hash using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
+        pointer = digest(encrypted_data).hex()
+        
+        # store data on dht node
+        dht_manager.set_value(pointer, encrypted_data)
+
+        # blockchain start time
+        bc_start_time = time.perf_counter()
+
+        # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
+        blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name)
+        # mine unconfirmed transactions and announce block to all peers
+        result = blockChainManager.mine_unconfirmed_transactions()
+        
+        CSVLogger.timeObj['BlockchainStorageTime'] = (time.perf_counter()-bc_start_time)
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+        
+        print("\nTime to store pointer on blockchain without dht and decryption:", format((time.perf_counter()-bc_start_time), '.8f'))
+        print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
+        
+        print(result)
+        CSVLogger.log_run()
+    if(encryption_method=='asymmetric'):
+        CSVLogger.asym_create_data_csv()
     else:
-        print('Invalid encryption method')
-        return None
-
-    # generate hash using kademlia digest built-in function, which uses SHA1 algorithm to generate hash
-    pointer = digest(encrypted_data).hex()
-    
-    # store data on dht node
-    dht_manager.set_value(pointer, encrypted_data)
-
-    # blockchain start time
-    bc_start_time = time.perf_counter()
-
-    # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
-    blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name)
-    # mine unconfirmed transactions and announce block to all peers
-    result = blockChainManager.mine_unconfirmed_transactions()
-    
-    CSVLogger.timeObj['Blockchain time'] = (time.perf_counter()-bc_start_time)
-    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
-    
-    print("\nTime to store pointer on blockchain without dht and decryption:", format((time.perf_counter()-bc_start_time), '.8f'))
-    print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
-    
-    print(result)
-    return result
+        CSVLogger.sym_create_data_csv()
 
 total_read_time = 0
 # read data 
 # this function will return block
 def read_data():
-    
+
     # find block
     blockNo, block = blockChainManager.readblock()
-    
-    # calculate start time to read data 
-    start_time = time.perf_counter() + blockChainManager.find_block_time + rbac.permission_time
-    
-    if(block is not None):
-        # take data owner name from block meta data
-        owner_name = block['meta-data']['client-name']
+    for i in range(test_run):
+        CSVLogger.timeObj = {}
         
-        try:
-            # current peer information
-            peer = [{"client_address": my_endpoint, "client_name": client_name}]
+        # simulate rbac time again 
+        rbac.verify_permission(client_role, 'read', 'blockchain') # - required for test run only
+        
+        # simulate find block time again
+        blockChainManager.findblock(blockNo)  # - required for test run only
 
-            # if data owner is not current user then look for owner endpoint from peer_list
-            if client_name != owner_name:
-                # get one peer endpoint from peer_list
-                peer = [p for p in peer_list if p['client_name'] == owner_name]
+        # calculate start time to read data 
+        start_time = time.perf_counter() + blockChainManager.find_block_time + rbac.permission_time
+        
+        if(block is not None):
+            # take data owner name from block meta data
+            owner_name = block['meta-data']['client-name']
+            try:
+                # current peer information
+                peer = [{"client_address": my_endpoint, "client_name": client_name}]
 
-            if len(peer) > 0:
-                # data read request time
-                req_time = time.perf_counter()
-                headers = {'Content-Type': "application/json"}
-                # send data read request to owner to decrypt data
-                response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
-                    data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
-                
-                if response.ok:
-                    # response object return by owner
-                    response_object = response.json()
-                    CSVLogger.timeObj['DataRequestTime']=(time.perf_counter()-req_time)
-                    print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
-                
-                    # verify ring signature
-                    isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
-                    if(isVerified is True):
-                        print('Data decryption time with requesters public key when data is returned from owner')
-                        # decrypte data with requester's/reader private key
-                        plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
-                        CSVLogger.timeObj['Overalltime'] = (time.perf_counter()-start_time)
-                        print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
-                        
-                        # print data that is returned
-                        print(plain_text)
+                # if data owner is not current user then look for owner endpoint from peer_list
+                if client_name != owner_name:
+                    # get one peer endpoint from peer_list
+                    peer = [p for p in peer_list if p['client_name'] == owner_name]
+
+                if len(peer) > 0:
+                    # data read request time
+                    req_time = time.perf_counter()
+                    headers = {'Content-Type': "application/json"}
+                    # send data read request to owner to decrypt data
+                    response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
+                        data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
+                    
+                    if response.ok:
+                        # response object return by owner
+                        response_object = response.json()
+                        CSVLogger.timeObj['DataReadRequestTime']=(time.perf_counter()-req_time)
+                        print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
+                    
+                        # verify ring signature
+                        isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
+                        if(isVerified is True):
+                            print('Data decryption time with requesters public key when data is returned from owner')
+                            # decrypte data with requester's/reader private key
+                            plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
+                            CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+                            print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
+                            
+                            # print data that is returned
+                            print(plain_text)
+                    else:
+                        print('Failed to read data')
                 else:
-                    print('Failed to read data')
-            else:
-                print(owner_name + ' peer is unavailable.')
-                return None
-        except:
-            print('Unable to read data')
-            print(owner_name + ' peer might be unavailable.')
-            return None
-    else:
-        print('block not found')
-        return None
+                    print(owner_name + ' peer is unavailable.')
+            except:
+                print('Unable to read data')
+                print(owner_name + ' peer might be unavailable.')
+        else:
+            print('block not found')
+        # save current run time
+        CSVLogger.log_run()
+    
+    # save csv file for read data
+    CSVLogger.read_data_csv()
 
 def update_data(data, block):
     encryption_method = ''
@@ -577,51 +598,76 @@ def update_data(data, block):
     while len(encryption_method) == 0:
         encryption_method = input("choose encryption method symmetric/asymmetric?")
     
-    start_time = time.perf_counter()  + rbac.permission_time
+    for i in range(test_run):
+        CSVLogger.timeObj = {}
+        # simulate rbac time again 
+        rbac.verify_permission(client_role, 'update', 'blockchain') # - required for test run only
+        
+        # simulate find block time again
+        blockChainManager.findblock(blockChainManager.find_block_no)  # - required for test run only
+        
+        start_time = time.perf_counter()  + rbac.permission_time
 
-    # if user choose asymmetric encryption option
-    if(encryption_method == 'asymmetric'):
-        print('Data encrypt with owners public key while updating data')
-        # encrypt data with public key
-        encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-        encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
+        # if user choose asymmetric encryption option
+        if(encryption_method == 'asymmetric'):
+            print('Data encrypt with owners public key while updating data')
+            # encrypt data with public key
+            encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
+            encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
 
-    # if user choose symmetric encryption option
-    elif(encryption_method=='symmetric'):
-        print('Data encrypt with symmetric key while updating data')
-        # encrypt data with symmetric key
-        encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
-        print('Encrypt symmetric key with owner public key while updating data')
-        # encrypt symmetric key with owner's public key
-        encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
-        # create data object with symmetric data and symmetric key
-        encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
-    else:
-        print('Invalid encryption method')
-        return None
+        # if user choose symmetric encryption option
+        elif(encryption_method=='symmetric'):
+            print('Data encrypt with symmetric key while updating data')
+            # encrypt data with symmetric key
+            encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
+            print('Encrypt symmetric key with owner public key while updating data')
+            # encrypt symmetric key with owner's public key
+            encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
+            # create data object with symmetric data and symmetric key
+            encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
+        else:
+            print('Invalid encryption method')
+            return None
 
-    # extract pointer from existing block
-    pointer = block['data']
+        # extract pointer from existing block
+        pointer = block['data']
 
-    # store data on dht node
-    dht_manager.set_value(pointer, encrypted_data)
+        # store data on dht node
+        dht_manager.set_value(pointer, encrypted_data)
 
-    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
-    print("\nOverall time to update data (with encryption, dht):", format((time.perf_counter()-start_time), '.8f'))
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+        print("\nOverall time to update data (with encryption, dht):", format((time.perf_counter()-start_time), '.8f'))
+        
+        print('data updated')
+        CSVLogger.log_run()
     
-    print('data updated')
+    if(encryption_method=='asymmetric'):
+        CSVLogger.asym_update_data_csv()
+    else:
+        CSVLogger.sym_update_data_csv()
 
 def delete_data(block):
-    start_time = time.perf_counter() + rbac.permission_time
-    # extract pointer from existing block
-    pointer = block['data']
-    # 'DELETED' will identify that data is deleted
-    dht_manager.set_value(pointer, 'DELETED')
-    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+blockChainManager.find_block_time
-    print("\nOverall time to delete data on dht:", format(((time.perf_counter()-start_time)+blockChainManager.find_block_time),'.8f'))
-    
-    print('Data deleted on DHT.')
+    for i in range(test_run):
+        CSVLogger.timeObj = {}
+        # simulate rbac time again 
+        rbac.verify_permission(client_role, 'delete', 'blockchain') # - required for test run only
+        CSVLogger.timeObj['RbacTime'] = rbac.permission_time
+        
+        # simulate find block time again
+        blockChainManager.findblock(blockChainManager.find_block_no)  # - required for test run only
+        CSVLogger.timeObj['BlockchainReadTime'] = blockChainManager.find_block_time
 
+        start_time = time.perf_counter() + rbac.permission_time
+        # extract pointer from existing block
+        pointer = block['data']
+        # 'DELETED' will identify that data is deleted
+        dht_manager.set_value(pointer, 'DELETED')
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+blockChainManager.find_block_time
+        print("\nOverall time to delete data on dht:", format(((time.perf_counter()-start_time)+blockChainManager.find_block_time),'.8f'))
+        
+        print('Data deleted on DHT.')
+        CSVLogger.log_run()
+    CSVLogger.delete_data_csv()
 def decrypt_block_content(block):
     
     # extract pointer from block object
@@ -725,8 +771,6 @@ def display_menu():
                 elif(client_name == 'customer'):
                     customer_data_input() 
 
-                print(CSVLogger.timeObj)
-                CSVLogger.timeObj={}   
             else:
                 print('You are not authorized to perform this action.')
             
@@ -736,8 +780,6 @@ def display_menu():
              # verify permission
             if(rbac.verify_permission(client_role, 'read', 'blockchain')):
                 read_data()
-                print(CSVLogger.timeObj)
-                CSVLogger.timeObj={}
             else:
                 print('You are not authorized to perform this action.')
             
@@ -767,8 +809,6 @@ def display_menu():
                     elif(client_name == 'customer'):
                         customer_data_input(block)
                     
-                    print(CSVLogger.timeObj)
-                    CSVLogger.timeObj={}
             else:
                 print('You are not authorized to perform this action.')
 
@@ -785,8 +825,6 @@ def display_menu():
                         print('You can not modify this data.')
                     else:
                         delete_data(block)
-                        print(CSVLogger.timeObj)
-                        CSVLogger.timeObj={}
             else:
                 print('You are not authorized to perform this action.')
 

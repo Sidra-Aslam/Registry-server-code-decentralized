@@ -6,6 +6,7 @@ import json
 import binascii
 from time import perf_counter
 from csv_log import CSVLogger
+
 class RingManager:
     def __init__(self, pub_key, pvt_key, peers):
         # variable to hold current user private key + public key and all other users public keys
