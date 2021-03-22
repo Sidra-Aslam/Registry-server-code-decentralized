@@ -15,8 +15,9 @@ from urllib.parse import urlparse
 from time import sleep
 import time
 from csv_log import CSVLogger
+from multiprocessing import Process
 
-test_run = 20
+test_run = 50
 
 # variable to store perrs list
 peer_list = []
@@ -112,7 +113,7 @@ def chain(block_no=None):
         requester = request.get_json()
         block = blockChainManager.findblock(block_no)
         # decrypt data
-        data = decrypt_block_content(block)
+        data, read_type = decrypt_block_content(block)
         
 
         # role is public user
@@ -138,10 +139,12 @@ def chain(block_no=None):
             print('Asymmetric data encryption with requesters public key while data read request')
             # encrypt data with requester's public key
             encrypted_data = encryptionManager.encrypt(data, requester_public_key)
+            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricEncryption']
+            
             # create ring signature of encrypted dtaa
             sign = ring_manager.sign(encrypted_data)
             # return signature and encrypted data to requester
-            return jsonify({'sign':sign,'data':encrypted_data})
+            return jsonify({'sign':sign,'data':encrypted_data, 'enc_type':read_type, 'timeObj':CSVLogger.timeObj})
 
     # post method, this will be called by other clients to replicate data on other BC nodes after mining
     elif request.method == 'POST':
@@ -461,6 +464,7 @@ def create_data(data):
     
     # repeat the process n times
     for i in range(test_run):
+        # clear time object for each run
         CSVLogger.timeObj = {}
         # verify permission again 
         rbac.verify_permission(client_role, 'write', 'blockchain') # - for test run
@@ -515,17 +519,19 @@ def create_data(data):
         print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
         
         print(result)
-        CSVLogger.log_run()
+        # save time in list for current run
+        CSVLogger.save_time()
+    # create excel file based on encryption method
     if(encryption_method=='asymmetric'):
         CSVLogger.asym_create_data_csv()
     else:
         CSVLogger.sym_create_data_csv()
 
 total_read_time = 0
+overall_enc_time = 0
 # read data 
 # this function will return block
 def read_data():
-
     # find block
     blockNo, block = blockChainManager.readblock()
     for i in range(test_run):
@@ -540,6 +546,7 @@ def read_data():
         # calculate start time to read data 
         start_time = time.perf_counter() + blockChainManager.find_block_time + rbac.permission_time
         
+        read_type = None
         if(block is not None):
             # take data owner name from block meta data
             owner_name = block['meta-data']['client-name']
@@ -563,9 +570,14 @@ def read_data():
                     if response.ok:
                         # response object return by owner
                         response_object = response.json()
-                        CSVLogger.timeObj['DataReadRequestTime']=(time.perf_counter()-req_time)
                         print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
-                    
+                        read_type = response_object['enc_type']
+                        timeObj = response_object['timeObj']
+                        
+                        CSVLogger.timeObj['EncDecTime'] =  timeObj['EncDecTime']
+                        CSVLogger.timeObj['CreateRing'] =  timeObj['CreateRing']
+                        CSVLogger.timeObj['DhtRead'] =  timeObj['DhtRead']
+                        
                         # verify ring signature
                         isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
                         if(isVerified is True):
@@ -587,10 +599,13 @@ def read_data():
         else:
             print('block not found')
         # save current run time
-        CSVLogger.log_run()
+        CSVLogger.save_time()
     
     # save csv file for read data
-    CSVLogger.read_data_csv()
+    if(read_type=='asymmetric'):
+        CSVLogger.asym_read_data_csv()
+    else:
+        CSVLogger.sym_read_data_csv()
 
 def update_data(data, block):
     encryption_method = ''
@@ -639,7 +654,7 @@ def update_data(data, block):
         print("\nOverall time to update data (with encryption, dht):", format((time.perf_counter()-start_time), '.8f'))
         
         print('data updated')
-        CSVLogger.log_run()
+        CSVLogger.save_time()
     
     if(encryption_method=='asymmetric'):
         CSVLogger.asym_update_data_csv()
@@ -666,10 +681,10 @@ def delete_data(block):
         print("\nOverall time to delete data on dht:", format(((time.perf_counter()-start_time)+blockChainManager.find_block_time),'.8f'))
         
         print('Data deleted on DHT.')
-        CSVLogger.log_run()
+        CSVLogger.save_time()
     CSVLogger.delete_data_csv()
 def decrypt_block_content(block):
-    
+    CSVLogger.timeObj['EncDecTime']=0
     # extract pointer from block object
     pointer = block['data']
 
@@ -698,22 +713,29 @@ def decrypt_block_content(block):
         
         # if data is encrypted with public key then decrypt data with owner's private key
         if('asymmetric-data' in dht_data):
+            read_type = 'asymmetric'
             print('Asymmetric decryption time with owner key while data read request')
             decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)                    
+            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricDecryption']
             print("Data is decrypted using owner's private key")
             
         # if data is encrypted with symmetric key
         elif('symmetric-data' in dht_data):
+            read_type = 'symmetric'
             print('Symmetric key decryption with owners public key while data read request')
             # decrypt symmetric key with owner's private key
             decrypted_symmetric_key = encryptionManager.decrypt(dht_data['symmetric-key'], encryptionManager.private_key)                    
+            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricDecryption']
+
             print('Symmetric data decryption with symmetric key while data read request')
             # decrypt data by using symmetric key
             decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], decrypted_symmetric_key)
+            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['SymmetricDecryption']
+            
             print("Data is decrypted using symmetric key")
 
         if decrypted_data is not None:
-            return decrypted_data
+            return (decrypted_data, read_type)
         else:
             return None
 
