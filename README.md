@@ -8,6 +8,7 @@ Run following command to install required all libraries mentioned in 'requiremen
 pip install -r requirements.txt
 ```
 
+Note: we recommend to use Anaconda framework because it provides most of of libraries pre-installed
 ## Steps to run code
 
 
