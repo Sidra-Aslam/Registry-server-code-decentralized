@@ -38,7 +38,7 @@ class RbacManager:
         
         print("\nTime to verify permission:", format(self.permission_time, '.8f'))
         return result
-        
+ 
     # this method will be used to authenticate role if it exists
     def authenticate(self, client, role):
         return client in self.clients and self.acl._roles.get(role) is not None

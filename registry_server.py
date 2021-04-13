@@ -42,7 +42,6 @@ def peers():
             # remove not responding peers from main list
             for peer in remove_peers:
                 peer_list.remove(peer)
-             
 
         # check if client address is not already in the peers list
         else:

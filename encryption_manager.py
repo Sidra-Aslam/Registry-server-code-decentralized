@@ -34,8 +34,7 @@ class EncryptionManager:
       ).decode()
       # print('Private Key: '+self.private_key)
       # print('Public Key: '+self.public_key)
-      
-      
+
    def encrypt(self, data, pub_key):
       start_time = perf_counter()
       # convert data object to json string

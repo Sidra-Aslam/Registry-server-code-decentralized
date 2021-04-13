@@ -1,3 +1,4 @@
+#This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 import csv
 import pandas as pd
 
@@ -7,13 +8,13 @@ class CSVLogger(object):
     timeList = []
     # dict object to hold time parameters
     timeObj = {}
-    
+
     # method to save time object to list (this will be called n times)
     @classmethod
     def save_time(cls):
         cls.timeList.append(cls.timeObj)
         cls.timeObj = {}
-    
+
     # method to create csv for create_data (Asymmetric)
     @classmethod
     def asym_create_data_csv(cls):

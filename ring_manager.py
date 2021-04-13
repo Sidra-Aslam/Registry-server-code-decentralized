@@ -27,7 +27,7 @@ class RingManager:
 
         # create ring object using signer's private key and all public keys of other peers
         self.ring = Ring(keys)
-
+    
     # method to sign data
     def sign(self, data):
         start_time=perf_counter()
@@ -55,6 +55,3 @@ class RingManager:
         else:
             print('Ring verification failed')
         return isVerified
-
-
-
