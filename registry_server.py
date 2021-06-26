@@ -21,7 +21,7 @@ def peers():
     
     elif request.method == 'POST':
         remove_peers = []
-        # get address (api url) and client_name of new client from request
+        # add address (api url) and client_name of new client from request
         current_peer = request.get_json()
         
         headers = {'Content-Type': "application/json"}
@@ -42,6 +42,7 @@ def peers():
             # remove not responding peers from main list
             for peer in remove_peers:
                 peer_list.remove(peer)
+             
 
         # check if client address is not already in the peers list
         else:

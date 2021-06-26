@@ -19,8 +19,8 @@ Note: we recommend to use Anaconda framework because it provides most of of libr
 
 2. Run main file (main.py)
     ```
-    PEER1: python main.py --port 8060 --client wood_cutter --role owner
-    PEER2: python main.py --port 8062 --client transporter --role business_partner
+    PEER1: python main.py --port 8060 --client occupant --role owner
+    PEER2: python main.py --port 8062 --client dso --role business_partner
     ```
 ## Prototype introduction
 when any actor will be connected to the registry server then he will try to connect to any other available peer to copy blockchain.

@@ -6,7 +6,7 @@ from csv_log import CSVLogger
 class RbacManager:
     def __init__(self):
         # list of clients
-        self.clients = ["wood_cutter", "transporter", "warehouse_storage", "furniture_assembly",  "furniture_shop", "customer"]
+        self.clients = ["occupant", "household", "building", "community",  "dso", "government"]
         self.client_names = ", ".join(self.clients)
 
         # create rbac object of RBAC library
@@ -38,7 +38,7 @@ class RbacManager:
         
         print("\nTime to verify permission:", format(self.permission_time, '.8f'))
         return result
- 
+        
     # this method will be used to authenticate role if it exists
     def authenticate(self, client, role):
         return client in self.clients and self.acl._roles.get(role) is not None

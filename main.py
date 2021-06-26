@@ -17,7 +17,7 @@ import time
 from csv_log import CSVLogger
 from multiprocessing import Process
 
-test_run = 50
+test_run = 1
 
 # variable to store perrs list
 peer_list = []
@@ -215,71 +215,73 @@ def initialize_components():
     register()
     initialize_blockchain()
 
-# data input function for transporter actor
-def transporter_data_input(block=None):
-    # tranpsort actor data object to hold private data
-    private_data = {'UserId': '', 'ProductId': '', 'PickupPlace': ''}
-    # tranpsort actor data object to hold sensitive data
-    sensitive_data = {'DeliveryPlace': '', 'PickupDate': ''}
-    # tranpsort actor data object to hold public data
-    public_data = {'DeliveryDate': ''}
+# function to convert input values into json format
+# value type=int,float
+def format_key_value(input_text, value_type):
+    try:
+        # main dict object to store key value pairs
+        key_values={}
+
+        # split user input text (i.e aa:2.2,bb:44.5)
+        values = input_text.split(',')
+        # iterate all inputs
+        for value in values:
+            try:
+                # split according to key value pair
+                k, v=value.split(':')
+                
+                # strip is used to removed empty space in key or value
+                k = k.strip() 
+                v = v.strip()
+                
+                # convert value to specific type (int,float)
+                if value_type=='int':
+                    key_values[k]=int(v)
+                elif value_type=='float':
+                    key_values[k]=float(v)
+            except:
+                print('Invalid key value pair: '+value)
+    except:
+        print('Unable to process input values, please provide valid key value pairs and try again.')
+    
+    return key_values
+
+# data input function for occupant actor
+def occupant_data_input(block=None):
+
+    # occupant actor data object to hold private data
+    private_data = {'ConsumerId': '', 'ComfortPreference': {}, 'Temperature':''}
+    # occupant actor data object to hold sensitive data
+    sensitive_data = {'Schedule': {}}
+    # occupant actor data object to hold public data
+    public_data = {'ConsumptionMix': {}}
 
     # take private data from actor
-    while len(private_data['UserId']) == 0:
-        private_data['UserId'] = input("User Id: ")
-    while len(private_data['ProductId']) == 0:
-        private_data['ProductId'] = input("Product Id: ")
-    while len(private_data['PickupPlace']) == 0:
-        private_data['PickupPlace'] = input("Pickup place: ")
+    while len(private_data['ConsumerId']) == 0:
+        private_data['ConsumerId'] = input("Consumer Id: ")
+    
+    print("Enter multiple inputs in format as -> key : value, ")
+    while len(private_data['ComfortPreference']) == 0:
+        input_text = input('Enter Comfort Preference as key value pairs (text, float):')
+        private_data['ComfortPreference'] = format_key_value(input_text, 'float')
 
+    while len(private_data['Temperature']) == 0:
+        private_data['Temperature'] = input("Temperature: ")
+    
     # take privacy sensitive data from actor
-    while len(sensitive_data['DeliveryPlace']) == 0:
-        sensitive_data['DeliveryPlace'] = input("Delivery place: ")
-    while len(sensitive_data['PickupDate']) == 0:
-        sensitive_data['PickupDate'] = input("Pickup date: ")
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(sensitive_data['Schedule']) == 0:
+        input_text = input('Enter Schedule as key value pairs (text, bool -> 0/1):')
+        # convert input values to json format with int conversion
+        sensitive_data['Schedule'] = format_key_value(input_text, 'int')
+
 
     # take public data from actor
-    while len(public_data['DeliveryDate']) == 0:
-        public_data['DeliveryDate'] = input("Delivery date: ")
-
-    # create data object
-    data = {
-        'private': private_data,
-        'sensitive': sensitive_data,
-        'public': public_data
-    }
-
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
-    
-# data input function for wood_cutter actor
-def wood_cutter_data_input(block=None):
-    # wood_cutter object to hold private data
-    private_data = {'UserId': '', 'ProductId': '', 'Location': '', }
-    # wood_cutter object to hold sensitive data
-    sensitive_data = {'DateOfCutting': ''}
-    # wood_cutter object to hold public data
-    public_data = {'WoodType': ''}
-    
-    # take private data from actor
-    while len(private_data['UserId']) == 0:
-        private_data['UserId'] = input("User Id: ")
-    while len(private_data['ProductId']) == 0:
-        private_data['ProductId'] = input("Product Id: ")
-    while len(private_data['Location']) == 0:
-        private_data['Location'] = input("Location: ")
-    
-    # take private data from actor
-    while len(sensitive_data['DateOfCutting']) == 0:
-        sensitive_data['DateOfCutting'] = input("Date of cutting: ")
-
-    # take other data from actor
-    while len(public_data['WoodType']) == 0:
-        public_data['WoodType'] = input("Wood Type: ")
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(public_data['ConsumptionMix']) == 0:
+        input_text = input('Enter Consumption Mix as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        public_data['ConsumptionMix'] = format_key_value(input_text, 'float')
 
     # create data object
     data = {
@@ -295,35 +297,82 @@ def wood_cutter_data_input(block=None):
     else:
         update_data(data, block)
 
-# data input function for warehouse_storage actor
-def warehouse_storage_data_input(block=None):
-    # wood_cutter object to hold private data
-    private_data = {'UserId': '', 'ProductId': '', 'ProductStorageLocation': '', 'ProcessedDateTime':'', }
-    # wood_cutter object to hold sensitive data
-    sensitive_data = {'FreeStorageSpace': '', 'Quantity':''}
-    # wood_cutter object to hold public data
-    public_data = {'Processed': ''}
-    
-    # take private data from actor
-    while len(private_data['UserId']) == 0:
-        private_data['UserId'] = input("User Id: ")
-    while len(private_data['ProductId']) == 0:
-        private_data['ProductId'] = input("Product Id: ")
-    while len(private_data['ProductStorageLocation']) == 0:
-        private_data['ProductStorageLocation'] = input("Product storage location: ")
-    while len(private_data['ProcessedDateTime']) == 0:
-        private_data['ProcessedDateTime'] = input("Processed date and time: ")
-    
-    # take private data from actor
-    while len(sensitive_data['FreeStorageSpace']) == 0:
-        sensitive_data['FreeStorageSpace'] = input("Free storage space: ")
-    while len(sensitive_data['Quantity']) == 0:
-        sensitive_data['Quantity'] = input("Quantity: ")
-    
-    # take other data from actor
-    while len(public_data['Processed']) == 0:
-        public_data['Processed'] = input("Processed (Yes/No): ")
+# data input function for household actor
+def household_data_input(block=None):
 
+    # household actor data object to hold private data
+    private_data = {'ConsumerId': '', 'PerformanceDataForAppliances': {}}
+    # household actor data object to hold sensitive data
+    sensitive_data = {'MeasureConsumption': {}}
+    # household actor data object to hold public data
+    public_data = {'HouseholdSize': ''}
+
+    # take private data from actor
+    while len(private_data['ConsumerId']) == 0:
+        private_data['ConsumerId'] = input("Consumer Id: ")
+    
+    print("Enter multiple inputs in format as -> key : value, ")
+    while len(private_data['PerformanceDataForAppliances']) == 0:
+        input_text = input('Enter Performance Data For Appliances as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        private_data['PerformanceDataForAppliances'] = format_key_value(input_text, 'float')
+
+    # take privacy sensitive data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(sensitive_data['MeasureConsumption']) == 0:
+        input_text = input('Enter Measure Consumption as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        sensitive_data['MeasureConsumption'] = format_key_value(input_text, 'float')
+
+    # take public data from actor
+    while len(public_data['HouseholdSize']) == 0:
+        public_data['HouseholdSize'] = input("Household Size: ")
+    
+    # create data object
+    data = {
+        'private': private_data,
+        'sensitive': sensitive_data,
+        'public': public_data
+    }
+
+    # if block is none then this fuction will used to take input and create new data
+    # else block has some value then this fuction will used to take input and update existing data
+    if(block is None):
+        create_data(data)
+    else:
+        update_data(data, block)
+
+# data input function for building actor
+def building_data_input(block=None):
+
+    # building actor data object to hold private data
+    private_data = {'ConsumerId': '', 'ThermalTransmittance': {}}
+    # building actor data object to hold sensitive data
+    sensitive_data = {'EnergyConsumption': {}}
+    # building actor data object to hold public data
+    public_data = {'BuildingLocation': ''}
+
+    # take private data from actor
+    while len(private_data['ConsumerId']) == 0:
+        private_data['ConsumerId'] = input("Consumer Id: ")
+    
+    print("Enter multiple inputs in format as -> key : value, ")
+    while len(private_data['ThermalTransmittance']) == 0:
+        input_text = input('Enter Thermal transmittance of building envelope as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        private_data['ThermalTransmittance'] = format_key_value(input_text, 'float')
+
+    # take privacy sensitive data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(sensitive_data['EnergyConsumption']) == 0:
+        input_text = input('Enter Energy Consumption as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        sensitive_data['EnergyConsumption'] = format_key_value(input_text, 'float')
+
+    # take public data from actor
+    while len(public_data['BuildingLocation']) == 0:
+        public_data['BuildingLocation'] = input("Building Location: ")
+    
     # create data object
     data = {
         'private': private_data,
@@ -338,31 +387,40 @@ def warehouse_storage_data_input(block=None):
     else:
         update_data(data, block)
     
-# data input function for furniture_assembly actor
-def furniture_assembly_data_input(block=None):
-    # wood_cutter object to hold private data
-    private_data = {'UserId': '', 'FurnitureId': ''}
-    # wood_cutter object to hold sensitive data
-    sensitive_data = {'NumberOfPieces': '', 'FurnitureDesign':'' }
-    # wood_cutter object to hold public data
-    public_data = {'FurnitureName': ''}
-    
-    # take private data from actor
-    while len(private_data['UserId']) == 0:
-        private_data['UserId'] = input("User Id: ")
-    while len(private_data['FurnitureId']) == 0:
-        private_data['FurnitureId'] = input("Furniture Id: ")
-    
-    # take private data from actor
-    while len(sensitive_data['NumberOfPieces']) == 0:
-        sensitive_data['NumberOfPieces'] = input("Number of pieces (3 furniture sets): ")
-    while len(sensitive_data['FurnitureDesign']) == 0:
-        sensitive_data['FurnitureDesign'] = input("Furniture Design: ")
-    
-    # take other data from actor
-    while len(public_data['FurnitureName']) == 0:
-        public_data['FurnitureName'] = input("Furniture Name: ")
+# data input function for community actor
+def community_data_input(block=None):
 
+    # community actor data object to hold private data
+    private_data = {'ConsumerId': '', 'PerformanceDataForPowerPlant': {}}
+    # community actor data object to hold sensitive data
+    sensitive_data = {'EnergyProduction': {}}
+    # community actor data object to hold public data
+    public_data = {'ShareOfRenewables': {}}
+
+    # take private data from actor
+    while len(private_data['ConsumerId']) == 0:
+        private_data['ConsumerId'] = input("Consumer Id: ")
+    
+    print("Enter multiple inputs in format as -> key : value, ")
+    while len(private_data['PerformanceDataForPowerPlant']) == 0:
+        input_text = input('Enter Performance data for power plant as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        private_data['PerformanceDataForPowerPlant'] = format_key_value(input_text, 'float')
+
+    # take privacy sensitive data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(sensitive_data['EnergyProduction']) == 0:
+        input_text = input('Enter Energy Production as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        sensitive_data['EnergyProduction'] = format_key_value(input_text, 'float')
+
+    # take public data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(public_data['ShareOfRenewables']) == 0:
+        input_text = input('Enter Share of renewables in energy production as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        public_data['ShareOfRenewables'] = format_key_value(input_text, 'float')
+    
     # create data object
     data = {
         'private': private_data,
@@ -376,30 +434,38 @@ def furniture_assembly_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    
-# data input function for furniture_assembly actor
-def furniture_shop_data_input(block=None):
-    # wood_cutter object to hold private data
-    private_data = {'UserId': ''}
-    # wood_cutter object to hold sensitive data
-    sensitive_data = {'FurnitureShopLocation': '', 'PurchasedDateAndTime':'' }
-    # wood_cutter object to hold public data
-    public_data = {'FurnitureQuality': ''}
-    
-    # take private data from actor
-    while len(private_data['UserId']) == 0:
-        private_data['UserId'] = input("User Id: ")
-    
-    # take private data from actor
-    while len(sensitive_data['FurnitureShopLocation']) == 0:
-        sensitive_data['FurnitureShopLocation'] = input("Furniture shop location: ")
-    while len(sensitive_data['PurchasedDateAndTime']) == 0:
-        sensitive_data['PurchasedDateAndTime'] = input("Purchased date and time: ")
-    
-    # take other data from actor
-    while len(public_data['FurnitureQuality']) == 0:
-        public_data['FurnitureQuality'] = input("Furniture quality: ")
 
+# data input function for dso actor
+def dso_data_input(block=None):
+
+    # dso actor data object to hold private data
+    private_data = {'DistributionLosses': {}}
+    # dso actor data object to hold sensitive data
+    sensitive_data = {'EnergyProduction': {}}
+    # dso actor data object to hold public data
+    public_data = {'GridBalance': {}}
+
+    # take private data from actor
+    print("Enter multiple inputs in format as -> key : value, ")
+    while len(private_data['DistributionLosses']) == 0:
+        input_text = input('Enter Distribution Losses as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        private_data['DistributionLosses'] = format_key_value(input_text, 'float')
+
+    # take privacy sensitive data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(sensitive_data['EnergyProduction']) == 0:
+        input_text = input('Enter Energy Production as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        sensitive_data['EnergyProduction'] = format_key_value(input_text, 'float')
+
+    # take public data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(public_data['GridBalance']) == 0:
+        input_text = input('Enter GridBalance as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        public_data['GridBalance'] = format_key_value(input_text, 'float')
+    
     # create data object
     data = {
         'private': private_data,
@@ -413,35 +479,30 @@ def furniture_shop_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
-    
-# data input function for customer actor
-def customer_data_input(block=None):
-    # wood_cutter object to hold private data
-    private_data = {'UserId': '', 'ProductId': '', 'PaymentDetails': '', }
-    # wood_cutter object to hold sensitive data
-    sensitive_data = {'PurchasedDateAndTime': '', 'PurchasedQuantity':'', 'Style':''}
-    # wood_cutter object to hold public data
-    public_data = {}
-    
-    # take private data from actor
-    while len(private_data['UserId']) == 0:
-        private_data['UserId'] = input("User Id: ")
-    while len(private_data['ProductId']) == 0:
-        private_data['ProductId'] = input("Product Id: ")
-    while len(private_data['PaymentDetails']) == 0:
-        private_data['PaymentDetails'] = input("Payment details: ")
-    
-    # take private data from actor
-    while len(sensitive_data['PurchasedDateAndTime']) == 0:
-        sensitive_data['PurchasedDateAndTime'] = input("Purchased date and time: ")
-    while len(sensitive_data['PurchasedQuantity']) == 0:
-        sensitive_data['PurchasedQuantity'] = input("Purchased quantity: ")
-    while len(sensitive_data['Style']) == 0:
-        sensitive_data['Style'] = input("Style: ")
 
+# data input function for government actor
+def government_data_input(block=None):
+
+    # government actor data object to hold sensitive data
+    sensitive_data = {'CityScaleEnergy': {}}
+    # government actor data object to hold public data
+    public_data = {'GrantAmount': ''}
+
+    # take privacy sensitive data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(sensitive_data['CityScaleEnergy']) == 0:
+        input_text = input('Enter City Scale Energy as key value pairs (text, float):')
+        # convert input values to json format with float conversion
+        sensitive_data['CityScaleEnergy'] = format_key_value(input_text, 'float')
+
+    # take public data from actor
+    print("Enter multiple inputs in format as -> key : value,")
+    while len(public_data['GrantAmount']) == 0:
+        public_data['GrantAmount'] = input("Grant Amount: ")
+    
     # create data object
     data = {
-        'private': private_data,
+        'private': {},
         'sensitive': sensitive_data,
         'public': public_data
     }
@@ -472,7 +533,9 @@ def create_data(data):
         start_time = time.perf_counter() + rbac.permission_time
 
         #take user id from private data
-        user_id = data['private']['UserId']
+        user_id = ''
+        if 'ConsumerId' in data['private']:
+            user_id = data['private']['ConsumerId']
         
         encrypted_data = ''
 
@@ -780,18 +843,18 @@ def display_menu():
             # verify permission
             if(rbac.verify_permission(client_role, 'write', 'blockchain')):
                 # display menu based on actor name
-                if(client_name == 'wood_cutter'):
-                    wood_cutter_data_input()
-                elif(client_name == 'transporter'):
-                    transporter_data_input()
-                elif(client_name == 'warehouse_storage'):
-                    warehouse_storage_data_input()
-                elif(client_name == 'furniture_assembly'):
-                    furniture_assembly_data_input()
-                elif(client_name == 'furniture_shop'):
-                    furniture_shop_data_input()
-                elif(client_name == 'customer'):
-                    customer_data_input() 
+                if(client_name == 'occupant'):
+                    occupant_data_input()
+                elif(client_name == 'household'):
+                    household_data_input()
+                elif(client_name == 'building'):
+                    building_data_input()
+                elif(client_name == 'community'):
+                    community_data_input()
+                elif(client_name == 'dso'):
+                    dso_data_input()
+                elif(client_name == 'government'):
+                    government_data_input() 
 
             else:
                 print('You are not authorized to perform this action.')
@@ -811,26 +874,24 @@ def display_menu():
             if(rbac.verify_permission(client_role, 'update', 'blockchain')):
                 # read block
                 blockNo, block = blockChainManager.readblock()
-                
                   
                 # if block found then take new input from user to update data
                 if(block is not None):
                     # check if current user is not owner of this data
                     if block['meta-data']['client-name'] != client_name:
                         print('You can not modify this data.')
-                    elif(client_name == 'wood_cutter'):
-                        wood_cutter_data_input(block)
-                    elif(client_name == 'transporter'):
-                        transporter_data_input(block)
-                    elif(client_name == 'warehouse_storage'):
-                        warehouse_storage_data_input(block)
-                    elif(client_name == 'furniture_assembly'):
-                        furniture_assembly_data_input(block)
-                    elif(client_name == 'furniture_shop'):
-                        furniture_shop_data_input(block)
-                    elif(client_name == 'customer'):
-                        customer_data_input(block)
-                    
+                    elif(client_name == 'occupant'):
+                        occupant_data_input(block)
+                    elif(client_name == 'household'):
+                        household_data_input(block)
+                    elif(client_name == 'building'):
+                        building_data_input(block)
+                    elif(client_name == 'community'):
+                        community_data_input(block)
+                    elif(client_name == 'dso'):
+                        dso_data_input(block)
+                    elif(client_name == 'government'):
+                        government_data_input(block)
             else:
                 print('You are not authorized to perform this action.')
 
@@ -871,7 +932,7 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='furniture_shop', help='Enter client name')
+    parser.add_argument('-c', '--client', default='household', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
     
     args = parser.parse_args()
