@@ -1,4 +1,4 @@
-# Privacy-aware Distributed Ledger for Product Traceability in Supply Chain Environments
+# Privacy-aware Distributed Ledger for Data Management
 
 
 ## Installation
