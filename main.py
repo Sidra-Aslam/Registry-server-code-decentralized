@@ -17,7 +17,7 @@ import time
 from csv_log import CSVLogger
 from multiprocessing import Process
 
-test_run = 1
+test_run = 50
 
 # variable to store perrs list
 peer_list = []
@@ -239,6 +239,8 @@ def format_key_value(input_text, value_type):
                     key_values[k]=int(v)
                 elif value_type=='float':
                     key_values[k]=float(v)
+                elif value_type=='text':
+                    key_values[k]=v
             except:
                 print('Invalid key value pair: '+value)
     except:
@@ -263,7 +265,7 @@ def occupant_data_input(block=None):
     print("Enter multiple inputs in format as -> key : value, ")
     while len(private_data['ComfortPreference']) == 0:
         input_text = input('Enter Comfort Preference as key value pairs (text, float):')
-        private_data['ComfortPreference'] = format_key_value(input_text, 'float')
+        private_data['ComfortPreference'] = format_key_value(input_text, 'text')
 
     while len(private_data['Temperature']) == 0:
         private_data['Temperature'] = input("Temperature: ")
@@ -296,6 +298,7 @@ def occupant_data_input(block=None):
         create_data(data)
     else:
         update_data(data, block)
+
 
 # data input function for household actor
 def household_data_input(block=None):
@@ -932,7 +935,7 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='household', help='Enter client name')
+    parser.add_argument('-c', '--client', default='occupant', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
     
     args = parser.parse_args()
