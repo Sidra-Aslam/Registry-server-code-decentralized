@@ -17,7 +17,7 @@ import time
 from csv_log import CSVLogger
 from multiprocessing import Process
 
-test_run = 50
+test_run = 1
 
 # variable to store perrs list
 peer_list = []
