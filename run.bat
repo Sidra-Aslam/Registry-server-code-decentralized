@@ -1,17 +1,17 @@
 @ECHO OFF
 start "Registry Server" python registry_server.py
 timeout 2
-start "main.py occupant, running on port 8060" python main.py --port 8060 --client occupant --role owner
+start "main.py occupant, running on port 8060" python main.py --port 8060 --client communit --role owner --id community1
 timeout 2
-start "main.py occupant, running on port 8092" python main.py --port 8092 --client occupant --role owner
+start "main.py occupant, running on port 8092" python main.py --port 8092 --client building --role owner --id building1 --community
 timeout 2
-start "main.py occupant, running on port 8094" python main.py --port 8094 --client occupant --role owner
+start "main.py occupant, running on port 8094" python main.py --port 8094 --client household --role owner --id household1 --building1
 timeout 2
-start "main.py occupant, running on port 8096" python main.py --port 8096 --client occupant --role owner
+start "main.py occupant, running on port 8096" python main.py --port 8096 --client household --role owner --id household2 --building1
 timeout 2
-start "main.py occupant, running on port 8098" python main.py --port 8098 --client occupant --role owner
+start "main.py occupant, running on port 8098" python main.py --port 8098 --client household --role owner --id household3 --building1
 timeout 2
-start "main.py occupant, running on port 8058" python main.py --port 8058 --client occupant --role owner
+start "main.py occupant, running on port 8058" python main.py --port 8058 --client occupant --role owner --id occupant1 --household1-building1
 timeout 2
 start "main.py occupant, running on port 8056" python main.py --port 8056 --client occupant --role owner
 timeout 2
