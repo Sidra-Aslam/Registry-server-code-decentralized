@@ -1,0 +1,43 @@
+[
+    {
+        "id": "government1",
+        "actor": "government",
+        "role": "owner",
+        "dso": {
+            "id": "government1-dso1",
+            "actor": "dso",
+            "role": "owner",
+            "community": {
+                "id": "dso1-community1",
+                "actor": "community",
+                "role": "owner",
+                "buildings": [
+                    {
+                        "id": "community1-building1",
+                        "actor": "building",
+                        "role": "owner",
+                        "households":[
+                            {
+                                "id":"building1-household1",
+                                "actor":"household",
+                                "role":"owner",
+                                "occupants":[
+                                    {
+                                        "id":"household1-occupant1",
+                                        "actor":"occupant",
+                                        "role":"owner"
+                                    },
+                                    {
+                                        "id":"household1-occupant2",
+                                        "actor":"occupant",
+                                        "role":"owner"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    }
+]
