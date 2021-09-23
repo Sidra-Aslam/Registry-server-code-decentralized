@@ -7,10 +7,6 @@ class RbacManager:
     def __init__(self):
         # list of clients
         self.clients = ["occupant", "household", "building", "community",  "dso", "government"]
-
-        #self.clients1 = {'gov': 'government', 'dso': 'DSO', 'community': 'community', 'building': 'building1', 'household': 'building1-household1',
-        #'occupant': 'building1-household1-occupant1'}
-        #self.clients1_names = ", ".join(self.clients1)
         
         # business partners rules definition
         self.business_partners=[]
@@ -68,28 +64,6 @@ class RbacManager:
             return True
         else:
             return False
-
-     #def verify_partner_privacy(self, clients1, client_role, privacy_type):
-        #for name in clients1: 
-           # if 'community' == 'business_partner' and 'dso' == 'business_partner':
-            #    return privacy_type != 'private-data'
-            # elif 'community' == 'business_partner' and 'gov' == 'business_partner':
-              #   return privacy_type != 'private-data'
-            # elif 'household' == 'business_partner' and 'building' == 'business_partner':
-              #   return privacy_type != 'private-data'
-            # elif 'household' == 'business_partner' and 'occupant' == 'business_partner':
-              #   return privacy_type != 'private-data'
-            # elif 'occupant' == 'business_partner' and 'building' == 'business_partner':
-              #   return privacy_type != 'private-data'
-            # elif 'household' == 'business_partner' and 'community' == 'business_partner':
-             #    return privacy_type != 'private-data'
-            # elif 'occupant' == 'business_partner' and 'community' == 'business_partner':
-              #   return privacy_type != 'private-data'
-            # else:
-              #   return False
-    
-    #verify_partner_privacy(community, business_partner, public_data)
-
     
     # check if current user is business partner with other user
     def check_business_partner(self, current_actor, other_actor):
@@ -97,12 +71,15 @@ class RbacManager:
             return True
         elif((other_actor, current_actor) in self.business_partners):
             return True
+        # when same actor reads the data (data owner and requester is the same)
+        elif(other_actor == current_actor):
+            return True
         else:
             return False
 
 
-rbac = RbacManager()
-if(rbac.check_business_partner('dso','community')):
-    print("business partners")
-else:
-    print("not business partners")
+# rbac = RbacManager()
+# if(rbac.check_business_partner('dso','government')):
+#     print("business partners")
+# else:
+#     print("not business partners")

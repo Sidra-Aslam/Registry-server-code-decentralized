@@ -191,7 +191,7 @@ class BlockchainManager:
         return (blockNo, self.findblock(blockNo))
     
     # function to store data (pointer and metadata) on blockchain
-    def new_transaction(self, pointer, user_id, privacy_type, client_name):
+    def new_transaction(self, pointer, user_id, privacy_type, client_name, client_id):
         dataObj = {
             'data':pointer,
             'meta-data' : {
@@ -199,7 +199,8 @@ class BlockchainManager:
                 'data-entry-date':datetime.now().strftime("%d/%m/%Y"),
                 'data-entry-time':datetime.now().strftime("%H:%M:%S"),
                 'privacy-type':privacy_type,
-                'client-name':client_name
+                'client-name':client_name,
+                'client-id':client_id
             }
         }
         # create json string

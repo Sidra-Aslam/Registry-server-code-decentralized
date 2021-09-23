@@ -16,6 +16,7 @@ from time import sleep
 import time
 from csv_log import CSVLogger
 from multiprocessing import Process
+import re
 
 test_run = 1
 
@@ -35,6 +36,9 @@ client_name = None
 
 # name of current client
 client_role = None
+
+# id of current client
+client_id = None
 
 # port at which client api is running
 port = None
@@ -121,18 +125,19 @@ def chain(block_no=None):
             data = data['public']
 
         # role is business partner or role is owner of other company
-        elif requester['role'] == 'business_partner' or (requester['role'] == 'owner' and requester['name'] != client_name):
+        # client id condition is added to handle the case when same client requests the data who has created it
+        elif requester['role'] == 'business_partner' or (requester['role'] == 'owner' and requester['client_id'] != client_id):
             # remove private data from data object
             del data['private']
         
         # current peer information
-        peer = [{"client_address": my_endpoint, "client_name": client_name, 'public_key': encryptionManager.public_key}]
+        peer = [{"client_address": my_endpoint, "client_id": client_id, 'public_key': encryptionManager.public_key}]
         
         # clinet_name is a current login user. and requester is a user who reads data
         # if data owner is not current user then look for owner endpoint from peer_list
-        if client_name != requester['name']:
+        if client_id != requester['client_id']:
             # get one peer endpoint from peer_list to find out data requester's enspoint 
-            peer = [p for p in peer_list if p['client_name'] == requester['name']]
+            peer = [p for p in peer_list if p['client_id'] == requester['client_id']]
         
         if len(peer) > 0:
             requester_public_key = peer[0]['public_key']
@@ -170,7 +175,8 @@ def register():
     try:
         headers = {'Content-Type': "application/json"}
         req = requests.post(registry_server+ "peers", data=json.dumps(
-            {"client_address": my_endpoint, "client_name": client_name, "public_key": encryptionManager.public_key}), headers=headers)
+            {"client_address": my_endpoint, "client_name": client_name, 
+            "public_key": encryptionManager.public_key, "client_id":client_id}), headers=headers)
 
         if(req.ok):
             print('Connected with registry server')
@@ -574,7 +580,7 @@ def create_data(data):
         bc_start_time = time.perf_counter()
 
         # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
-        blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name)
+        blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name, client_id)
         # mine unconfirmed transactions and announce block to all peers
         result = blockChainManager.mine_unconfirmed_transactions()
         
@@ -616,14 +622,16 @@ def read_data():
         if(block is not None):
             # take data owner name from block meta data
             owner_name = block['meta-data']['client-name']
+            # verify if the client is valid business partner
+            if(rbac.check_business_partner(client_name, owner_name)==False):
+                print('you are not business partner with '+owner_name+' so you can not read data.')
+                return
+            
             try:
-                # current peer information
-                peer = [{"client_address": my_endpoint, "client_name": client_name}]
-
-                # if data owner is not current user then look for owner endpoint from peer_list
-                if client_name != owner_name:
-                    # get one peer endpoint from peer_list
-                    peer = [p for p in peer_list if p['client_name'] == owner_name]
+            # read owner id from meta data
+                owner_id = block['meta-data']['client-id']
+                # find endpoint of owner
+                peer = find_end_point(owner_id)
 
                 if len(peer) > 0:
                     # data read request time
@@ -631,7 +639,7 @@ def read_data():
                     headers = {'Content-Type': "application/json"}
                     # send data read request to owner to decrypt data
                     response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
-                        data=json.dumps({'role': client_role, 'name':client_name}), headers=headers)
+                        data=json.dumps({'role': client_role, 'client_id':client_id}), headers=headers)
                     
                     if response.ok:
                         # response object return by owner
@@ -658,7 +666,7 @@ def read_data():
                     else:
                         print('Failed to read data')
                 else:
-                    print(owner_name + ' peer is unavailable.')
+                    print(owner_id + ' peer is unavailable.')
             except:
                 print('Unable to read data')
                 print(owner_name + ' peer might be unavailable.')
@@ -804,6 +812,34 @@ def decrypt_block_content(block):
             return (decrypted_data, read_type)
         else:
             return None
+# 0,1
+# 0,1,2,0
+# method to find endpoint based on parent
+def find_end_point(owner_id):
+    # find indexes in ids, we will use logic on these ids to identify 
+    # if the client and data owner are in same group/hierarchy
+    owner_indexes = re.findall(r'\d+', owner_id)
+    client_indexes = re.findall(r'\d+', client_id)
+    # check id indexes length, if they are equal then remove last index
+    if(len(owner_indexes)==len(client_indexes)):
+        owner_indexes.pop()
+        client_indexes.pop()
+    elif(len(owner_indexes)>len(client_indexes)):
+        # consider client index length
+        owner_indexes = owner_indexes[:len(client_indexes)]
+    else:
+        # consider owner index length
+        client_indexes = client_indexes[:len(owner_indexes)]
+    
+    if(owner_id==client_id):
+        # owner id is same as client id so return current endpoing details
+        return [{"client_address": my_endpoint, "client_id": client_id}]
+    elif(owner_indexes==client_indexes):
+        # find peer details from peer_list based on owner id
+        return [p for p in peer_list if p['client_id'] == owner_id]
+    else:
+        print('You can not read data from client '+owner_id)
+        return []
 
 # get public key of receiver using endpoing '/public_key'
 def get_key(client):
@@ -825,7 +861,7 @@ def get_key(client):
 
 def display_menu():
     def print_menu():
-        print(30 * "-", client_name, " - ", client_role, 30 * "-")
+        print(30 * "-", client_name, "-", client_role, "- ID: ", client_id, 30 * "-")
         print("1. Create data ")
         print("2. Read data ")
         print("3. Update data ")
@@ -935,13 +971,16 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='occupant', help='Enter client name')
+    parser.add_argument('-c', '--client', default='building', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
+    parser.add_argument('-id', '--id', default='government0-building0', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port
     client_name = args.client
     client_role = args.role
+    client_id = args.id
+
     # authenticate client name and role using rabac manager
     if(not rbac.authenticate(client_name, client_role)):
         print('Not authenticated.')
