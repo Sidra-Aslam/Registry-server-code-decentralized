@@ -189,7 +189,7 @@ class BlockchainManager:
             blockNo = input("Please enter block number: ")
         
         return (blockNo, self.findblock(blockNo))
-    
+
     # function to store data (pointer and metadata) on blockchain
     def new_transaction(self, pointer, user_id, privacy_type, client_name, client_id):
         dataObj = {
@@ -203,9 +203,7 @@ class BlockchainManager:
                 'client-id':client_id
             }
         }
-        # create json string
-        jsonStr = json.dumps(dataObj)
-        self.blockchain.add_new_transaction(jsonStr)
+        self.blockchain.add_new_transaction(dataObj)
 
     # check all peers that are currently active
     def consensus(self):
