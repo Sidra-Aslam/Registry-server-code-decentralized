@@ -40,6 +40,9 @@ client_role = None
 # id of current client
 client_id = None
 
+# variable to store actors that are linked with me/my client id
+my_actors_tree = []
+
 # port at which client api is running
 port = None
 
@@ -77,6 +80,7 @@ def peers():
     global peer_list
     global blockChainManager
     global ring_manager
+    global my_actors_tree
     
     peer_list = list(request.get_json())
     # remove my endpoint from peer list
@@ -88,13 +92,14 @@ def peers():
     # create object of ring manager using signer's private key and all public keys of other peers
     ring_manager = RingManager(encryptionManager.public_key, encryptionManager.private_key, peer_list)
     
-
+    # check actors that are linked with me/my client id
+    my_actors_tree = [p for p in peer_list if is_relation_valid(p['client_id'])]
+    
     print('Peer list updated')
     return ('', 200)
 
 # api /chain to return blockchain copy or replicate block on peers
 # this will be called from any other client
-
 @app.route('/chain', methods=['GET', 'POST']) # route mapping with get/post request
 @app.route('/chain/<block_no>', methods=['POST']) # route mapping with post and block number (for request data)
 def chain(block_no=None):
@@ -142,6 +147,13 @@ def chain(block_no=None):
         if len(peer) > 0:
             requester_public_key = peer[0]['public_key']
             print('Asymmetric data encryption with requesters public key while data read request')
+            
+            all_data=[]
+            # 50 transaction
+            for tran in transactions:
+                encrypted_data = encryptionManager.encrypt(tran, requester_public_key)    
+                all_data.append(encrypted_data)
+                
             # encrypt data with requester's public key
             encrypted_data = encryptionManager.encrypt(data, requester_public_key)
             CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricEncryption']
@@ -169,6 +181,29 @@ def chain(block_no=None):
             return "The block was discarded by the node", 400
 
         return "Block added to the chain", 201
+# 110
+# 111 --> parent same so return true, 
+# check if other client id is linked with me (is in same tree/hierarchy)
+def is_relation_valid(other_client_id) -> bool:
+    # find indexes in ids, we will use logic on these ids to identify 
+    # if the current client id and other client id are in same relation
+    other_client_indexes = re.findall(r'\d+', other_client_id)
+    client_indexes = re.findall(r'\d+', client_id)
+    # check id indexes length, if they are equal then remove last index
+    if(len(other_client_indexes)==len(client_indexes)):
+        other_client_indexes.pop()
+        client_indexes.pop()
+    elif(len(other_client_indexes)>len(client_indexes)):
+        # consider client index length
+        other_client_indexes = other_client_indexes[:len(client_indexes)]
+    else:
+        # consider owner index length
+        client_indexes = client_indexes[:len(other_client_indexes)]
+    
+    if(other_client_id == client_id or other_client_indexes == client_indexes):
+        return True
+    else:
+        return False
 
 # function to connect with registry server
 def register():
@@ -581,8 +616,6 @@ def create_data(data):
 
         # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
         blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name, client_id)
-        # mine unconfirmed transactions and announce block to all peers
-        result = blockChainManager.mine_unconfirmed_transactions()
         
         CSVLogger.timeObj['BlockchainStorageTime'] = (time.perf_counter()-bc_start_time)
         CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
@@ -590,7 +623,7 @@ def create_data(data):
         print("\nTime to store pointer on blockchain without dht and decryption:", format((time.perf_counter()-bc_start_time), '.8f'))
         print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
         
-        print(result)
+        print('Transaction created')
         # save time in list for current run
         CSVLogger.save_time()
     # create excel file based on encryption method
@@ -757,6 +790,7 @@ def delete_data(block):
         print('Data deleted on DHT.')
         CSVLogger.save_time()
     CSVLogger.delete_data_csv()
+    
 def decrypt_block_content(block):
     CSVLogger.timeObj['EncDecTime']=0
     # extract pointer from block object
@@ -841,6 +875,25 @@ def find_end_point(owner_id):
         print('You can not read data from client '+owner_id)
         return []
 
+def read_data_for_actor():
+    actor = ''
+    while len(actor) == 0:
+        actor = input("Enter actor name to request/read data: ")
+    
+    transactions = []
+    for block in blockChainManager.blockchain.chain:
+        transactions.extend(block.transactions)
+    
+    transactions = [t for t in transactions if t['meta-data']['client-name'] == actor]
+    
+    valid_transactions = []
+    for transaction in transactions:
+        actor_id = transaction['meta-data']['client-id']
+        if any(x['client_id'] == actor_id for x in my_actors_tree):
+            valid_transactions.append(transaction)
+            
+    print(valid_transactions)
+
 # get public key of receiver using endpoing '/public_key'
 def get_key(client):
     try:
@@ -867,6 +920,8 @@ def display_menu():
         print("3. Update data ")
         print("4. Delete data ")
         print("5. Display peers ")
+        print("6. Mine transactions ")
+        print("7. Display chain ")
         print("0. Exit ")
         print(73 * "-")
 
@@ -959,6 +1014,14 @@ def display_menu():
                 
             loop=True
         
+        elif choice == '6':
+            # mine unconfirmed transactions and announce block to all peers (multišple transactions will be stored in one block)
+            result = blockChainManager.mine_unconfirmed_transactions()
+            print(result)
+
+        elif choice == '7':
+            read_data_for_actor()
+            
         elif choice == '0':
             unregister()
             print("Exiting..")
