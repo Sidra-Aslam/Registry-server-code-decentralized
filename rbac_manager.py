@@ -55,16 +55,6 @@ class RbacManager:
     def authenticate(self, client, role):
         return client in self.clients and self.acl._roles.get(role) is not None
 
-    # check if current role is valid to access block based on privacy type e.g user is allow to access public data only 
-    def verify_privacy(self, client_role, privacy_type):
-        if( (client_role == 'owner') or
-            (client_role == 'business_partner' and privacy_type != 'private-data') or
-            (client_role == 'public_user' and privacy_type == 'public-data')):
-            print('Privacy validated')
-            return True
-        else:
-            return False
-    
     # check if current user is business partner with other user
     def check_business_partner(self, current_actor, other_actor):
         if((current_actor,other_actor) in self.business_partners):

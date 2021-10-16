@@ -26,10 +26,13 @@ def peers():
         
         headers = {'Content-Type': "application/json"}
 
+        # client already in peer list
+        peers = [p for p in peer_list if p['client_id'] == current_peer['client_id']]
+
        #if client is already in the list then disconnect it. 
-        if current_peer in peer_list:
+        if (len(peers)):
             # remove peer from peer_list
-            peer_list.remove(current_peer)
+            peer_list.remove(peers[0])
             # iterate all existing peers to acknowledge new client
             for peer in peer_list:
                 try:
@@ -37,7 +40,7 @@ def peers():
                     requests.post(peer['client_address'] + "/peers", data=json.dumps(list(peer_list)), headers=headers)
                 except:
                     # if there is any error in communication then remove that peer from the peers list
-                    remove_peers.remove(peer)
+                    remove_peers.append(peer)
             
             # remove not responding peers from main list
             for peer in remove_peers:
@@ -56,7 +59,7 @@ def peers():
                     requests.post(peer['client_address'] + "/peers", data=json.dumps(list(peer_list)), headers=headers)
                 except:
                     # if there is any error in communication then remove that peer from the peers list
-                    remove_peers.remove(peer)
+                    remove_peers.append(peer)
             
             # remove not responding peers from main list
             for peer in remove_peers:

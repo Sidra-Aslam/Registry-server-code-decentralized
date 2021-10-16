@@ -191,16 +191,20 @@ class BlockchainManager:
         return (blockNo, self.findblock(blockNo))
 
     # function to store data (pointer and metadata) on blockchain
-    def new_transaction(self, pointer, user_id, privacy_type, client_name, client_id):
+    def new_transaction(self, pointer, user_id, client_id, block):
+        previous_pointer=''
+        # if block is not none then consider previous pointer from block
+        if block is not None:
+            previous_pointer=block['data']
+
         dataObj = {
             'data':pointer,
             'meta-data' : {
                 'user-id':user_id,
                 'data-entry-date':datetime.now().strftime("%d/%m/%Y"),
                 'data-entry-time':datetime.now().strftime("%H:%M:%S"),
-                'privacy-type':privacy_type,
-                'client-name':client_name,
-                'client-id':client_id
+                'client-id':client_id,
+                'previous_pointer':previous_pointer
             }
         }
         self.blockchain.add_new_transaction(dataObj)

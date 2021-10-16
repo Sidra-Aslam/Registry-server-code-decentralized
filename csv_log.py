@@ -20,7 +20,8 @@ class CSVLogger(object):
     def asym_create_data_csv(cls):
         try:
             # create dataframe from list and rename column names
-            df = pd.DataFrame(cls.timeList).rename({'RbacTime': 'Time to verify permission', 
+            df = pd.DataFrame(cls.timeList).rename({'RbacTime': 'Time to verify permission',
+                            'EncDecTime':'Encryption/Decryption time', 
                             'AsymmetricEncryption': 'Data encryption (asymmetric key) time',
                             'DhtStorage':'DHT storage time',
                             'BlockchainStorageTime':'Blockchain storage time',
@@ -28,7 +29,7 @@ class CSVLogger(object):
                             }, axis='columns')
 
             # copy dataframe with ordered columns 
-            df = df[['Time to verify permission', 'Data encryption (asymmetric key) time', 'DHT storage time', 
+            df = df[['Time to verify permission', 'Encryption/Decryption time', 'Data encryption (asymmetric key) time', 'DHT storage time', 
                             'Blockchain storage time', 'Overall time']].copy()
             
             avgVal = df.mean()
@@ -50,8 +51,8 @@ class CSVLogger(object):
             # export data in excel sheet
             with pd.ExcelWriter("csv_files/asymmetric_create_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]
@@ -63,13 +64,14 @@ class CSVLogger(object):
         try:
             # create dataframe from list and rename column names
             df = pd.DataFrame(cls.timeList).rename({'RbacTime': 'Time to verify permission', 
+                            'EncDecTime':'Encryption/Decryption time',
                             'SymmetricEncryption': 'Data encryption (symmetric key) time',
                             'DhtStorage':'DHT storage time',
                             'BlockchainStorageTime':'Blockchain storage time',
                             'OverallTime':'Overall time' 
                             }, axis='columns')
             # copy dataframe with ordered columns
-            df = df[['Time to verify permission', 'Data encryption (symmetric key) time', 'DHT storage time', 
+            df = df[['Time to verify permission','Encryption/Decryption time', 'Data encryption (symmetric key) time', 'DHT storage time', 
                             'Blockchain storage time', 'Overall time']].copy()
             # calcuation averate, st.d, min, max
             avgVal = df.mean()
@@ -88,8 +90,8 @@ class CSVLogger(object):
             # df.to_csv("csv_files/symmetric_create_data.csv")
             with pd.ExcelWriter("csv_files/symmetric_create_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]
@@ -126,8 +128,8 @@ class CSVLogger(object):
             # df.to_csv("csv_files/asymmetric_update_data.csv")
             with pd.ExcelWriter("csv_files/asymmetric_update_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]
@@ -164,8 +166,8 @@ class CSVLogger(object):
             # df.to_csv("csv_files/symmetric_update_data.csv")
             with pd.ExcelWriter("csv_files/symmetric_update_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]
@@ -204,8 +206,8 @@ class CSVLogger(object):
             # df.to_csv("csv_files/asymmetric_read_data.csv")
             with pd.ExcelWriter("csv_files/asymmetric_read_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]
@@ -244,8 +246,8 @@ class CSVLogger(object):
             # df.to_csv("csv_files/symmetric_read_data.csv")
             with pd.ExcelWriter("csv_files/symmetric_read_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]
@@ -257,11 +259,12 @@ class CSVLogger(object):
             # create dataframe from list and rename column names
             df = pd.DataFrame(cls.timeList).rename({'RbacTime': 'Time to verify permission', 
                             'BlockchainReadTime':'Blockchain read time',
+                            'EncDecTime':'Encryption/Decryption time',
                             'DhtStorage':'DHT update time',
                             'OverallTime':'Overall time' 
                             }, axis='columns')
             # copy dataframe with ordered columns
-            df = df[['Time to verify permission', 'Blockchain read time', 'DHT update time', 'Overall time']].copy()
+            df = df[['Time to verify permission', 'Blockchain read time','Encryption/Decryption time', 'DHT update time', 'Overall time']].copy()
             # calcuation averate, st.d, min, max
             avgVal = df.mean()
             stdVal = df.std()
@@ -279,8 +282,8 @@ class CSVLogger(object):
             # df.to_csv("csv_files/delete_data.csv")
             with pd.ExcelWriter("csv_files/delete_data.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             # clear variables after csv is saved 
             cls.timeList=[]

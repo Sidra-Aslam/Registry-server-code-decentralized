@@ -1,0 +1,11 @@
+[
+    {
+        "actor": "government",
+       "schema":{
+        'private_data': {'DistributionLosses_private_privacy_level': {}}
+        'sensitive_data' : {'EnergyProduction': {}}
+        '' : {'GridBalance': {}}
+       }
+      
+    }
+]
