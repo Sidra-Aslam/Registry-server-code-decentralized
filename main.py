@@ -92,22 +92,23 @@ def peers():
     # create object of ring manager using signer's private key and all public keys of other peers
     ring_manager = RingManager(encryptionManager.public_key, encryptionManager.private_key, peer_list)
     
-    # check actors that are linked with me/my client id
+    # check actors that are linked with me/my client id/within my tree to verify relation
     my_actors_tree = [p for p in peer_list if is_relation_valid(p['client_id'])]
-    
+    my_actors_tree.append({"client_address": my_endpoint, "client_name": client_name, 
+            "public_key": encryptionManager.public_key, "client_id":client_id})
     print('Peer list updated')
     return ('', 200)
 
 # api /chain to return blockchain copy or replicate block on peers
 # this will be called from any other client
 @app.route('/chain', methods=['GET', 'POST']) # route mapping with get/post request
-@app.route('/chain/<block_no>', methods=['POST']) # route mapping with post and block number (for request data)
-def chain(block_no=None):
+@app.route('/chain/<actor>', methods=['POST']) # route mapping with post and block number (for request data)
+def chain(actor=None):
     global blockChainManager
     global peer_list
 
     # return blockchain copy
-    if request.method == 'GET' and block_no is None:
+    if request.method == 'GET' and actor is None:
         chain_data = []
         # iterate all blocks from blockchain
         for block in blockChainManager.blockchain.chain:
@@ -116,52 +117,62 @@ def chain(block_no=None):
         return jsonify(chain_data)
     
     # for requester
-    # get method and there is block number, so return the data from location
-    elif request.method == 'POST' and block_no is not None:
+    # post method with actor name so return the data after tree_verification
+    elif request.method == 'POST' and actor is not None:
         # get requester role and name
         requester = request.get_json()
-        block = blockChainManager.findblock(block_no)
-        # decrypt data
-        data, read_type = decrypt_block_content(block)
-        
+        # owner will verify if requester client id iis in my_actor_tree or not
+        if (any(c['client_id'] == requester['client_id'] for c in my_actors_tree) == False):
+            return jsonify({'error':'Invalid data request'})
 
-        # role is public user
-        if requester['role'] == 'public_user':
-            data = data['public']
-
-        # role is business partner or role is owner of other company
-        # client id condition is added to handle the case when same client requests the data who has created it
-        elif requester['role'] == 'business_partner' or (requester['role'] == 'owner' and requester['client_id'] != client_id):
-            # remove private data from data object
-            del data['private']
+        # decrypt owner data
+        all_data = read_my_data()
         
-        # current peer information
+        # iterate all data/transactions
+        for data in all_data:
+            # delete meta data from data (because it is not required to display to requester)
+            if 'meta-data' in data:
+                del data['meta-data']
+            
+            # role is public user
+            if requester['role'] == 'public_user':
+                data = data['public']
+
+            # role is business partner or role is owner of other company
+            # client id condition is added to handle the case when same client requests the data who has created it
+            elif requester['role'] == 'business_partner' or (requester['role'] == 'owner' and requester['client_id'] != client_id):
+                # remove private data from data object
+                del data['private']
+                del data['previous_data']
+        
+        # current peer information, if owner read his own data
         peer = [{"client_address": my_endpoint, "client_id": client_id, 'public_key': encryptionManager.public_key}]
         
         # clinet_name is a current login user. and requester is a user who reads data
         # if data owner is not current user then look for owner endpoint from peer_list
         if client_id != requester['client_id']:
-            # get one peer endpoint from peer_list to find out data requester's enspoint 
-            peer = [p for p in peer_list if p['client_id'] == requester['client_id']]
+            # get one peer endpoint from peer_list to find out data requester's enspoint/ return requester's peer information 
+            peer = [p for p in my_actors_tree if p['client_id'] == requester['client_id']]
         
         if len(peer) > 0:
+            # extract requester's public key from peer list
             requester_public_key = peer[0]['public_key']
+            print('requester client id: ' + peer[0]['client_id'])
             print('Asymmetric data encryption with requesters public key while data read request')
+            # # encrypt data with requester's public key
+            # encrypted_data = encryptionManager.encrypt(all_data, requester_public_key)
             
-            all_data=[]
-            # 50 transaction
-            for tran in transactions:
-                encrypted_data = encryptionManager.encrypt(tran, requester_public_key)    
-                all_data.append(encrypted_data)
-                
-            # encrypt data with requester's public key
-            encrypted_data = encryptionManager.encrypt(data, requester_public_key)
-            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricEncryption']
-            
+            # encrypt data with symmetric key
+            encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(all_data)
+            # encrypt symmetric key with requester's public key
+            encrypted_key = encryptionManager.encrypt(symmetric_key, requester_public_key)
+            # create data object with symmetric data and symmetric key
+            encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
+
             # create ring signature of encrypted dtaa
             sign = ring_manager.sign(encrypted_data)
             # return signature and encrypted data to requester
-            return jsonify({'sign':sign,'data':encrypted_data, 'enc_type':read_type, 'timeObj':CSVLogger.timeObj})
+            return jsonify({'sign':sign,'data':encrypted_data, 'timeObj':CSVLogger.timeObj})
 
     # post method, this will be called by other clients to replicate data on other BC nodes after mining
     elif request.method == 'POST':
@@ -181,10 +192,10 @@ def chain(block_no=None):
             return "The block was discarded by the node", 400
 
         return "Block added to the chain", 201
-# 110
-# 111 --> parent same so return true, 
+
 # check if other client id is linked with me (is in same tree/hierarchy)
 def is_relation_valid(other_client_id) -> bool:
+    global client_id
     # find indexes in ids, we will use logic on these ids to identify 
     # if the current client id and other client id are in same relation
     other_client_indexes = re.findall(r'\d+', other_client_id)
@@ -226,7 +237,8 @@ def register():
 def unregister():
     headers = {'Content-Type': "application/json"}
     requests.post(registry_server+ "peers", data=json.dumps(
-        {"client_address": my_endpoint, "client_name": client_name, "public_key": encryptionManager.public_key}), headers=headers)         
+        {"client_address": my_endpoint, "client_name": client_name, "client_id":client_id, 
+        "public_key": encryptionManager.public_key}), headers=headers)         
 
 # initialize blockchain copy
 def initialize_blockchain():
@@ -333,13 +345,7 @@ def occupant_data_input(block=None):
         'public': public_data
     }
 
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
-
+    create_data(data, block)
 
 # data input function for household actor
 def household_data_input(block=None):
@@ -379,13 +385,8 @@ def household_data_input(block=None):
         'public': public_data
     }
 
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
-
+    create_data(data, block)
+    
 # data input function for building actor
 def building_data_input(block=None):
 
@@ -424,12 +425,7 @@ def building_data_input(block=None):
         'public': public_data
     }
 
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
+    create_data(data, block)
     
 # data input function for community actor
 def community_data_input(block=None):
@@ -472,13 +468,8 @@ def community_data_input(block=None):
         'public': public_data
     }
 
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
-
+    create_data(data, block)
+    
 # data input function for dso actor
 def dso_data_input(block=None):
 
@@ -517,13 +508,8 @@ def dso_data_input(block=None):
         'public': public_data
     }
 
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
-
+    create_data(data, block)
+    
 # data input function for government actor
 def government_data_input(block=None):
 
@@ -551,17 +537,12 @@ def government_data_input(block=None):
         'public': public_data
     }
 
-    # if block is none then this fuction will used to take input and create new data
-    # else block has some value then this fuction will used to take input and update existing data
-    if(block is None):
-        create_data(data)
-    else:
-        update_data(data, block)
-
+    create_data(data, block)
+    
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
-def create_data(data):
+def create_data(data, block=None):
     encryption_method = ''
     # choose encryption method
     while len(encryption_method) == 0:
@@ -571,6 +552,12 @@ def create_data(data):
     for i in range(test_run):
         # clear time object for each run
         CSVLogger.timeObj = {}
+        CSVLogger.timeObj['EncDecTime'] = 0
+            
+        if block is not None:
+            # simulate read and decryption time again
+            read_my_data() # - required for test run only
+            
         # verify permission again 
         rbac.verify_permission(client_role, 'write', 'blockchain') # - for test run
         
@@ -615,302 +602,237 @@ def create_data(data):
         bc_start_time = time.perf_counter()
 
         # store pointer and meta data on blockchain (transaction will be added to unconfirmed list)
-        blockChainManager.new_transaction(pointer, user_id, 'private-data', client_name, client_id)
+        blockChainManager.new_transaction(pointer, user_id, client_id, block)
         
         CSVLogger.timeObj['BlockchainStorageTime'] = (time.perf_counter()-bc_start_time)
-        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+CSVLogger.timeObj['EncDecTime']
         
-        print("\nTime to store pointer on blockchain without dht and decryption:", format((time.perf_counter()-bc_start_time), '.8f'))
-        print("\nOverall time to create data (with encryption, dht, blockchain):", format((time.perf_counter()-start_time), '.8f'))
+        print("\nTime to store pointer on blockchain without dht and decryption:", format(CSVLogger.timeObj['BlockchainStorageTime'], '.8f'))
+        print("\nOverall time to create data (with encryption, dht, blockchain):", format(CSVLogger.timeObj['OverallTime'], '.8f'))
         
         print('Transaction created')
         # save time in list for current run
         CSVLogger.save_time()
+
     # create excel file based on encryption method
     if(encryption_method=='asymmetric'):
         CSVLogger.asym_create_data_csv()
     else:
         CSVLogger.sym_create_data_csv()
 
-total_read_time = 0
-overall_enc_time = 0
 # read data 
-# this function will return block
 def read_data():
-    # find block
-    blockNo, block = blockChainManager.readblock()
-    for i in range(test_run):
-        CSVLogger.timeObj = {}
-        
-        # simulate rbac time again 
-        rbac.verify_permission(client_role, 'read', 'blockchain') # - required for test run only
-        
-        # simulate find block time again
-        blockChainManager.findblock(blockNo)  # - required for test run only
+    # ask actor id to read data
+    actor_id = ''
+    while len(actor_id) == 0:
+        actor_id = input("Enter client id to request/read data: ")
 
-        # calculate start time to read data 
-        start_time = time.perf_counter() + blockChainManager.find_block_time + rbac.permission_time
-        
-        read_type = None
-        if(block is not None):
-            # take data owner name from block meta data
-            owner_name = block['meta-data']['client-name']
+    # find actor name by actor id
+    actor = [p for p in my_actors_tree if p['client_id'] == actor_id]
+    
+    if(len(actor) > 0):
+        for i in range(test_run):
+            CSVLogger.timeObj = {}
+            CSVLogger.timeObj['EncDecTime'] =  0
+            CSVLogger.timeObj['CreateRing'] =  0
+            CSVLogger.timeObj['DhtRead'] =  0
+            CSVLogger.timeObj['BlockchainReadTime'] =  0
+
+            # simulate rbac time again 
+            rbac.verify_permission(client_role, 'read', 'blockchain') # - required for test run only
+            
+            # calculate start time to read data 
+            start_time = time.perf_counter() + rbac.permission_time
+            
             # verify if the client is valid business partner
-            if(rbac.check_business_partner(client_name, owner_name)==False):
-                print('you are not business partner with '+owner_name+' so you can not read data.')
+            if(rbac.check_business_partner(client_name, actor[0]['client_name'])==False):
+                print('you are not business partner with '+actor[0]['client_name']+' so you can not read data.')
                 return
             
+            req_time = time.perf_counter()
+            
             try:
-            # read owner id from meta data
-                owner_id = block['meta-data']['client-id']
-                # find endpoint of owner
-                peer = find_end_point(owner_id)
-
-                if len(peer) > 0:
-                    # data read request time
-                    req_time = time.perf_counter()
-                    headers = {'Content-Type': "application/json"}
-                    # send data read request to owner to decrypt data
-                    response = requests.post(peer[0]['client_address']+ "/chain/"+blockNo, 
-                        data=json.dumps({'role': client_role, 'client_id':client_id}), headers=headers)
+                print('sending data read request to client id: '+actor[0]['client_id'])
+                headers = {'Content-Type': "application/json"}
+                # send data request to actor by calling /chain api+actor name
+                response = requests.post(actor[0]['client_address']+ "/chain/"+actor[0]['client_name'], 
+                    data=json.dumps({'role': client_role, 'client_id':client_id}), headers=headers)
+                
+                if response.ok:
+                    # response object return from actor/owner
+                    response_object = response.json()
                     
-                    if response.ok:
-                        # response object return by owner
-                        response_object = response.json()
-                        print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
-                        read_type = response_object['enc_type']
-                        timeObj = response_object['timeObj']
+                    timeObj = response_object['timeObj']
+                    
+                    CSVLogger.timeObj['EncDecTime'] =  timeObj['EncDecTime']
+                    CSVLogger.timeObj['CreateRing'] =  timeObj['CreateRing']
+                    CSVLogger.timeObj['DhtRead'] =  timeObj['DhtRead']
+                    CSVLogger.timeObj['BlockchainReadTime'] =  timeObj['BlockchainReadTime']
+                    
+                    # verify ring signature
+                    isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
+                    if(isVerified is True):
+                        data_obj = json.loads(response_object['data'])
+        
+                        # decrypt symmetric key with receiver's/requester private key
+                        decrypted_symmetric_key = encryptionManager.decrypt(data_obj['symmetric-key'], encryptionManager.private_key)                    
                         
-                        CSVLogger.timeObj['EncDecTime'] =  timeObj['EncDecTime']
-                        CSVLogger.timeObj['CreateRing'] =  timeObj['CreateRing']
-                        CSVLogger.timeObj['DhtRead'] =  timeObj['DhtRead']
+                        print('Symmetric data decryption with symmetric key while data read request')
+                        # decrypt data by using symmetric key
+                        decrypted_data = encryptionManager.symetric_decrypt(data_obj['symmetric-data'], decrypted_symmetric_key)
                         
-                        # verify ring signature
-                        isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
-                        if(isVerified is True):
-                            print('Data decryption time with requesters public key when data is returned from owner')
-                            # decrypte data with requester's/reader private key
-                            plain_text = encryptionManager.decrypt(response_object['data'], encryptionManager.private_key)
-                            CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
-                            print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
-                            
-                            # print data that is returned
-                            print(plain_text)
-                    else:
-                        print('Failed to read data')
+                        print(60 * "-")
+                        print('data retrieved from client id: '+actor[0]['client_id'])
+                        print(json.dumps(decrypted_data, indent=2))
+                        print()
+                    
                 else:
-                    print(owner_id + ' peer is unavailable.')
+                    print('Failed to read data from client id: ' + actor[0]['client_id'])
+
             except:
                 print('Unable to read data')
-                print(owner_name + ' peer might be unavailable.')
-        else:
-            print('block not found')
-        # save current run time
-        CSVLogger.save_time()
-    
-    # save csv file for read data
-    if(read_type=='asymmetric'):
-        CSVLogger.asym_read_data_csv()
-    else:
+                print(actor[0]['client_id'] + ' peer might be unavailable.')
+            
+            
+            CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+            print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
+            
+            print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
+
+            # save current run time
+            CSVLogger.save_time()
+
         CSVLogger.sym_read_data_csv()
-
-def update_data(data, block):
-    encryption_method = ''
-    # choose encryption method
-    while len(encryption_method) == 0:
-        encryption_method = input("choose encryption method symmetric/asymmetric?")
-    
-    for i in range(test_run):
-        CSVLogger.timeObj = {}
-        # simulate rbac time again 
-        rbac.verify_permission(client_role, 'update', 'blockchain') # - required for test run only
-        
-        # simulate find block time again
-        blockChainManager.findblock(blockChainManager.find_block_no)  # - required for test run only
-        
-        start_time = time.perf_counter()  + rbac.permission_time
-
-        # if user choose asymmetric encryption option
-        if(encryption_method == 'asymmetric'):
-            print('Data encrypt with owners public key while updating data')
-            # encrypt data with public key
-            encrypted_data = encryptionManager.encrypt(data, encryptionManager.public_key)
-            encrypted_data = json.dumps({'asymmetric-data': encrypted_data})
-
-        # if user choose symmetric encryption option
-        elif(encryption_method=='symmetric'):
-            print('Data encrypt with symmetric key while updating data')
-            # encrypt data with symmetric key
-            encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(data)
-            print('Encrypt symmetric key with owner public key while updating data')
-            # encrypt symmetric key with owner's public key
-            encrypted_key = encryptionManager.encrypt(symmetric_key, encryptionManager.public_key)
-            # create data object with symmetric data and symmetric key
-            encrypted_data = json.dumps({'symmetric-data': encrypted_data, 'symmetric-key': encrypted_key})
-        else:
-            print('Invalid encryption method')
-            return None
-
-        # extract pointer from existing block
-        pointer = block['data']
-
-        # store data on dht node
-        dht_manager.set_value(pointer, encrypted_data)
-
-        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
-        print("\nOverall time to update data (with encryption, dht):", format((time.perf_counter()-start_time), '.8f'))
-        
-        print('data updated')
-        CSVLogger.save_time()
-    
-    if(encryption_method=='asymmetric'):
-        CSVLogger.asym_update_data_csv()
     else:
-        CSVLogger.sym_update_data_csv()
-
+        print(actor_id + ' is unavailable or not valid in tree/hierarchy.')
+    
 def delete_data(block):
     for i in range(test_run):
         CSVLogger.timeObj = {}
         # simulate rbac time again 
         rbac.verify_permission(client_role, 'delete', 'blockchain') # - required for test run only
         CSVLogger.timeObj['RbacTime'] = rbac.permission_time
-        
-        # simulate find block time again
-        blockChainManager.findblock(blockChainManager.find_block_no)  # - required for test run only
-        CSVLogger.timeObj['BlockchainReadTime'] = blockChainManager.find_block_time
 
-        start_time = time.perf_counter() + rbac.permission_time
+        # simulate read and decryption time again
+        read_my_data() # - required for test run only
+        
+        start_time = time.perf_counter()
+
         # extract pointer from existing block
         pointer = block['data']
         # 'DELETED' will identify that data is deleted
         dht_manager.set_value(pointer, 'DELETED')
-        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+blockChainManager.find_block_time
-        print("\nOverall time to delete data on dht:", format(((time.perf_counter()-start_time)+blockChainManager.find_block_time),'.8f'))
+        if 'previous_pointers' in block:
+            # delete update history data
+            for prev_pointer in block['previous_pointers']:
+                dht_manager.set_value(prev_pointer, 'DELETED')
+
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+rbac.permission_time+CSVLogger.timeObj['EncDecTime']+CSVLogger.timeObj['BlockchainReadTime']
+        print("\nOverall time to delete data on dht:", format(CSVLogger.timeObj['OverallTime'],'.8f'))
         
         print('Data deleted on DHT.')
         CSVLogger.save_time()
     CSVLogger.delete_data_csv()
     
 def decrypt_block_content(block):
-    CSVLogger.timeObj['EncDecTime']=0
     # extract pointer from block object
     pointer = block['data']
 
-    # read metadata from block
-    meta_data = block['meta-data']
-
-    # get block privacy type e.g private, sensitive or public
-    privacy_type = meta_data['privacy-type']
-    
     # retrieve data from dht against provided pointer
     dht_data = dht_manager.get_value(pointer)
-
-    # check if current role is valid to access block based on privacy type (private data, public data, privacy-sensitive data)
-    if(rbac.verify_privacy(client_role, privacy_type) == False):
-        print('You are not authorized to access this data.')
-        return None
 
     # check if dht_data is deleted then retun None
     if(dht_data == 'DELETED'):
         print('DHT data is deleted.')
         return None
-
+    # id dht data is available then decrypt it
     elif dht_data is not None:
         decrypted_data = None
         dht_data = json.loads(dht_data)
         
         # if data is encrypted with public key then decrypt data with owner's private key
         if('asymmetric-data' in dht_data):
-            read_type = 'asymmetric'
             print('Asymmetric decryption time with owner key while data read request')
             decrypted_data = encryptionManager.decrypt(dht_data['asymmetric-data'], encryptionManager.private_key)                    
-            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricDecryption']
             print("Data is decrypted using owner's private key")
             
         # if data is encrypted with symmetric key
         elif('symmetric-data' in dht_data):
-            read_type = 'symmetric'
             print('Symmetric key decryption with owners public key while data read request')
             # decrypt symmetric key with owner's private key
             decrypted_symmetric_key = encryptionManager.decrypt(dht_data['symmetric-key'], encryptionManager.private_key)                    
-            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricDecryption']
-
+            
             print('Symmetric data decryption with symmetric key while data read request')
             # decrypt data by using symmetric key
             decrypted_data = encryptionManager.symetric_decrypt(dht_data['symmetric-data'], decrypted_symmetric_key)
-            CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['SymmetricDecryption']
             
             print("Data is decrypted using symmetric key")
 
         if decrypted_data is not None:
-            return (decrypted_data, read_type)
+            decrypted_data['meta-data'] = block['meta-data']
+            decrypted_data['data'] = pointer
+
+            return decrypted_data
         else:
             return None
-# 0,1
-# 0,1,2,0
-# method to find endpoint based on parent
-def find_end_point(owner_id):
-    # find indexes in ids, we will use logic on these ids to identify 
-    # if the client and data owner are in same group/hierarchy
-    owner_indexes = re.findall(r'\d+', owner_id)
-    client_indexes = re.findall(r'\d+', client_id)
-    # check id indexes length, if they are equal then remove last index
-    if(len(owner_indexes)==len(client_indexes)):
-        owner_indexes.pop()
-        client_indexes.pop()
-    elif(len(owner_indexes)>len(client_indexes)):
-        # consider client index length
-        owner_indexes = owner_indexes[:len(client_indexes)]
-    else:
-        # consider owner index length
-        client_indexes = client_indexes[:len(owner_indexes)]
-    
-    if(owner_id==client_id):
-        # owner id is same as client id so return current endpoing details
-        return [{"client_address": my_endpoint, "client_id": client_id}]
-    elif(owner_indexes==client_indexes):
-        # find peer details from peer_list based on owner id
-        return [p for p in peer_list if p['client_id'] == owner_id]
-    else:
-        print('You can not read data from client '+owner_id)
-        return []
 
-def read_data_for_actor():
-    actor = ''
-    while len(actor) == 0:
-        actor = input("Enter actor name to request/read data: ")
+def read_my_data():
+    CSVLogger.timeObj['EncDecTime'] = 0
+    CSVLogger.timeObj['DhtRead'] = 0
     
+    bc_start_time=time.perf_counter()        
+    # variable to store all transactions
     transactions = []
     for block in blockChainManager.blockchain.chain:
         transactions.extend(block.transactions)
     
-    transactions = [t for t in transactions if t['meta-data']['client-name'] == actor]
-    
-    valid_transactions = []
-    for transaction in transactions:
-        actor_id = transaction['meta-data']['client-id']
-        if any(x['client_id'] == actor_id for x in my_actors_tree):
-            valid_transactions.append(transaction)
-            
-    print(valid_transactions)
+    CSVLogger.timeObj['BlockchainReadTime'] = (time.perf_counter()-bc_start_time)
 
-# get public key of receiver using endpoing '/public_key'
-def get_key(client):
-    try:
-        # get one peer endpoint from peer_list
-        peer = [p for p in peer_list if p['client_name'] == client]
-        if len(peer) > 0:
-            response = requests.get(peer[0]['client_address']+ "/public_key")
-            if response.ok:
-                return response.text
-            else:
-                return None
+    # current actor's transactions, and match current client id from metedatadata and then if match then transaction
+    transactions = [t for t in transactions if t['meta-data']['client-id'] == client_id]
+    # decrypt all transactions
+    decrypted_data = []
+    for transaction in transactions:
+        # set initial time to 0 (actual time will be updated in decrypt_block_content function)
+        CSVLogger.timeObj['AsymmetricDecryption'] = 0
+        CSVLogger.timeObj['SymmetricDecryption'] = 0
+
+        data = decrypt_block_content(transaction)
+        CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['AsymmetricDecryption']
+        CSVLogger.timeObj['EncDecTime'] += CSVLogger.timeObj['SymmetricDecryption']
+        if data is not None:
+            decrypted_data.append(data)
+
+    # maintain transactions history by checking previous pointer
+    decrypted_data = maintain_update_history(decrypted_data, [])
+    return decrypted_data
+
+# manage previos pointer and new pointer in BC
+def maintain_update_history(transactions, previous_pointers):
+    transactions_history = []
+    
+    # pseudo code
+    for transaction in transactions:
+        # check if any previouse pointer exists in the transactions(match previous pointer with currrent data)
+        history_found = [t for t in transactions if t['meta-data']['previous_pointer'] == transaction['data']]
+        # history found so process it recursiverly
+        if len(history_found)>0:
+            previous_pointers.append(transaction['data'])
+
+            # history found so save previous data in same transaction
+            history_found[0]['previous_data']=transaction
+            
+            # call same update history function recursiverly to check the previous history of that found transaction, e.g 1, 2, 3
+            maintain_update_history(history_found, previous_pointers)
+        # history not found so save transaction in transaction_history variable
         else:
-            print(client + ' peer is offline.')
-            return None
-    except:
-        print(client + ' peer is offline.')
-        return None
+            if 'previous_data' not in transaction:
+                transaction['previous_data'] = {}
+                # store all previous pointers for this transaction
+            transaction['previous_pointers']=previous_pointers
+            transactions_history.append(transaction)
+        
+    return transactions_history
 
 def display_menu():
     def print_menu():
@@ -921,7 +843,7 @@ def display_menu():
         print("4. Delete data ")
         print("5. Display peers ")
         print("6. Mine transactions ")
-        print("7. Display chain ")
+        print("7. Display my tree/hierarchy ")
         print("0. Exit ")
         print(73 * "-")
 
@@ -966,26 +888,47 @@ def display_menu():
             # update data
             # verify permission
             if(rbac.verify_permission(client_role, 'update', 'blockchain')):
-                # read block
-                blockNo, block = blockChainManager.readblock()
-                  
-                # if block found then take new input from user to update data
-                if(block is not None):
-                    # check if current user is not owner of this data
-                    if block['meta-data']['client-name'] != client_name:
-                        print('You can not modify this data.')
-                    elif(client_name == 'occupant'):
-                        occupant_data_input(block)
-                    elif(client_name == 'household'):
-                        household_data_input(block)
-                    elif(client_name == 'building'):
-                        building_data_input(block)
-                    elif(client_name == 'community'):
-                        community_data_input(block)
-                    elif(client_name == 'dso'):
-                        dso_data_input(block)
-                    elif(client_name == 'government'):
-                        government_data_input(block)
+                # return all confirmed transactions after mining to the data owner/ read data for update it
+                all_data = read_my_data()
+                if len(all_data)==0:
+                    print('No data available for update')
+                else:
+                    # display transactions and print transaction number with data
+                    for data in all_data:
+                        # remove previous data object from data (so that only recent data can be displayed to user)
+                        del data['previous_data']
+                        print('Transaction number:', all_data.index(data))
+                        print(json.dumps(data, indent=2))
+                        print(30 * '-')
+                    
+                    # ask transaction number to update it
+                    transactionNumber = ''
+                    while len(transactionNumber) == 0:
+                        transactionNumber = input("Please enter transaction number to update data: ")
+                        if (transactionNumber.isnumeric() == False or int(transactionNumber) > len(all_data)-1):
+                            print('Invalid transaction number')
+                            transactionNumber=''
+
+                    # get block/transaction that user has requested to updated
+                    block = all_data[int(transactionNumber)]
+
+                    # if block found then take new input from user to update data
+                    if(block is not None):
+                        # check if current user id is not owner of this data
+                        if block['meta-data']['client-id'] != client_id:
+                            print('You can not modify this data.')
+                        elif(client_name == 'occupant'):
+                            occupant_data_input(block)
+                        elif(client_name == 'household'):
+                            household_data_input(block)
+                        elif(client_name == 'building'):
+                            building_data_input(block)
+                        elif(client_name == 'community'):
+                            community_data_input(block)
+                        elif(client_name == 'dso'):
+                            dso_data_input(block)
+                        elif(client_name == 'government'):
+                            government_data_input(block)
             else:
                 print('You are not authorized to perform this action.')
 
@@ -993,24 +936,46 @@ def display_menu():
             # delete data
              # verify permission
             if(rbac.verify_permission(client_role, 'delete', 'blockchain')):
-                # read block
-                blockNo, block = blockChainManager.readblock()
-                
-                if(block is not None):
-                    # check if current user is not owner of this data
-                    if block['meta-data']['client-name'] != client_name:
-                        print('You can not modify this data.')
-                    else:
-                        delete_data(block)
+                # return all confirmed transactions for delete
+                all_data = read_my_data()
+                if len(all_data)==0:
+                    print('No data available for delete')
+                else:
+                    # display transactions and print transaction number with data
+                    for data in all_data:
+                        # remove previous data object from data (so that only recent data can be displayed to user)
+                        del data['previous_data']
+                        print('Transaction number:', all_data.index(data))
+                        print(json.dumps(data, indent=2))
+                        print(30 * '-')
+                    
+                    # ask transaction number to delete it
+                    transactionNumber = ''
+                    while len(transactionNumber) == 0:
+                        transactionNumber = input("Please enter transaction number to delete it: ")
+                        if (transactionNumber.isnumeric() == False or int(transactionNumber) > len(all_data)-1):
+                            print('Invalid transaction number')
+                            transactionNumber=''
+
+                    # get block/transaction that user has requested to delete
+                    block = all_data[int(transactionNumber)]
+
+                    if(block is not None):
+                        # check if current user is not owner of this data
+                        if block['meta-data']['client-id'] != client_id:
+                            print('You can not modify this data.')
+                        else:
+                            delete_data(block)
             else:
                 print('You are not authorized to perform this action.')
 
         elif choice == '5':
             # display available peers
             for peer in peer_list:
+                print(30 * "-")
                 print("client address: ", peer['client_address'])
                 print("client name: \t", peer['client_name'])
-                print(60 * "-")
+                print(30 * "-")
                 
             loop=True
         
@@ -1020,8 +985,12 @@ def display_menu():
             print(result)
 
         elif choice == '7':
-            read_data_for_actor()
-            
+            for peer in my_actors_tree:
+                print(30 * "-")
+                print('client_name: '+peer['client_name'])
+                print('client_id: '+peer['client_id'])
+                print(30 * "-")
+                
         elif choice == '0':
             unregister()
             print("Exiting..")
@@ -1034,9 +1003,9 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='building', help='Enter client name')
+    parser.add_argument('-c', '--client', default='occupant', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
-    parser.add_argument('-id', '--id', default='government0-building0', help='Enter role name')
+    parser.add_argument('-id', '--id', default='government0-building0-household1-occupant2', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port
