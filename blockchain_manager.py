@@ -191,7 +191,7 @@ class BlockchainManager:
         return (blockNo, self.findblock(blockNo))
 
     # function to store data (pointer and metadata) on blockchain
-    def new_transaction(self, pointer, user_id, client_id, block):
+    def new_transaction(self, pointer, user_id, client_id, data_schema_uri, block):
         previous_pointer=''
         # if block is not none then consider previous pointer from block
         if block is not None:
@@ -201,10 +201,11 @@ class BlockchainManager:
             'data':pointer,
             'meta-data' : {
                 'user-id':user_id,
-                'data-entry-date':datetime.now().strftime("%d/%m/%Y"),
+                'data-entry-date':datetime.now().strftime("%Y-%m-%d"),
                 'data-entry-time':datetime.now().strftime("%H:%M:%S"),
                 'client-id':client_id,
-                'previous_pointer':previous_pointer
+                'previous_pointer':previous_pointer,
+                'data_schema_uri': data_schema_uri
             }
         }
         self.blockchain.add_new_transaction(dataObj)

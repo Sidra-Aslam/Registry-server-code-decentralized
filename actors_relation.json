@@ -212,6 +212,14 @@
                                     {
                                         "actor": "occupant",
                                         "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
                                     }
                                 ]
                             },
@@ -222,6 +230,14 @@
                                     {
                                         "actor": "occupant",
                                         "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
                                     }
                                 ]
                             },
@@ -232,6 +248,14 @@
                                     {
                                         "actor": "occupant",
                                         "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
                                     }
                                 ]
                             },
@@ -260,6 +284,206 @@
                                     {
                                         "actor": "occupant",
                                         "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "actor": "building",
+                        "role": "business_partner",
+                        "households": [
+                            {
+                                "actor": "household",
+                                "role": "owner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "owner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "business_partner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "public_user",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "business_partner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "actor": "building",
+                        "role": "public_user",
+                        "households": [
+                            {
+                                "actor": "household",
+                                "role": "owner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "owner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "business_partner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "public_user",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
+                                    }
+                                ]
+                            },
+                            {
+                                "actor": "household",
+                                "role": "business_partner",
+                                "occupants": [
+                                    {
+                                        "actor": "occupant",
+                                        "role": "owner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "business_partner"
+                                    },
+                                    {
+                                        "actor": "occupant",
+                                        "role": "public_user"
                                     }
                                 ]
                             }

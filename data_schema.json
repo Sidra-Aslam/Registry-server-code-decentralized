@@ -1,11 +1,71 @@
-[
-    {
-        "actor": "government",
-       "schema":{
-        'private_data': {'DistributionLosses_private_privacy_level': {}}
-        'sensitive_data' : {'EnergyProduction': {}}
-        '' : {'GridBalance': {}}
-       }
-      
+{
+    "government": {
+        "private": {},
+        "sensitive": {
+            "CityScaleEnergy_sensitive_privacy_level": {}
+        },
+        "public": {
+            "GrantAmount_public_privacy_level": ""
+        }
+    },
+    "dso": {
+        "private": {
+            "DistributionLosses_private_privacy_level": {}
+        },
+        "sensitive": {
+            "EnergyProduction_sensitive_privacy_level": {}
+        },
+        "public": {
+            "GridBalance_public_privacy_level": {}
+        }
+    },
+    "community": {
+        "private": {
+            "ConsumerId_private_privacy_level": "",
+            "PerformanceDataForPowerPlant_private_privacy_level": {}
+        },
+        "sensitive": {
+            "EnergyProduction_sensitive_privacy_level": {}
+        },
+        "public": {
+            "ShareOfRenewables_public_privacy_level": {}
+        }
+    },
+    "building": {
+        "private": {
+            "ConsumerId_private_privacy_level": "",
+            "ThermalTransmittance_private_privacy_level": {}
+        },
+        "sensitive": {
+            "EnergyConsumption_sensitive_privacy_level": {}
+        },
+        "public": {
+            "BuildingLocation_public_privacy_level": ""
+        }
+    },
+    "household": {
+        "private": {
+            "ConsumerId_private_privacy_level": "",
+            "PerformanceDataForAppliances_private_privacy_level": {}
+        },
+        "sensitive": {
+            "MeasureConsumption_sensitive_privacy_level": {}
+        },
+        "public": {
+            "HouseholdSize_public_privacy_level": ""
+        }
+    },
+    "occupant": {
+        "private": {
+            "ConsumerId_private_privacy_level": "",
+            "ComfortPreference_private_privacy_level": {},
+            "Temperature_private_privacy_level": ""
+        },
+        "sensitive": {
+            "Schedule_sensitive_privacy_level": {}
+        },
+        "public": {
+            "ConsumptionMix_public_privacy_level": {}
+        }
     }
-]
+}
