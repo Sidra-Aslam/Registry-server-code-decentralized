@@ -794,7 +794,7 @@ def decrypt_block_content(block):
             return decrypted_data
         else:
             return None
-
+# Data owner will read his own data and decrypt, and return data 
 def read_my_data():
     CSVLogger.timeObj['EncDecTime'] = 0
     CSVLogger.timeObj['DhtRead'] = 0
@@ -826,13 +826,13 @@ def read_my_data():
     decrypted_data = maintain_update_history(decrypted_data, [])
     return decrypted_data
 
-# manage previos pointer and new pointer in BC
+# manage previos pointer and new pointer in BC (transaction = all blockchain transactions)
 def maintain_update_history(transactions, previous_pointers):
     transactions_history = []
     
     # pseudo code
     for transaction in transactions:
-        # check if any previouse pointer exists in the transactions(match previous pointer with currrent data)
+        # check if any previouse pointer exists in the transactions(match previous pointer with currrent pointer/data)
         history_found = [t for t in transactions if t['meta-data']['previous_pointer'] == transaction['data']]
         # history found so process it recursiverly
         if len(history_found)>0:
