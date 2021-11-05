@@ -1,0 +1,4 @@
+1. Run proxy_server
+	python server_proxy.py
+2. Run client file
+	python hateoas_client.py

@@ -19,7 +19,7 @@ from multiprocessing import Process
 import re
 from datetime import datetime
 
-
+#localhost:8098/chain endpoint
 test_run = 1
 
 data_schema = None
@@ -830,7 +830,7 @@ def read_my_data():
 def maintain_update_history(transactions, previous_pointers):
     transactions_history = []
     
-    # pseudo code
+    # pseudo code (iterate all transactions one by one)
     for transaction in transactions:
         # check if any previouse pointer exists in the transactions(match previous pointer with currrent pointer/data)
         history_found = [t for t in transactions if t['meta-data']['previous_pointer'] == transaction['data']]
@@ -840,7 +840,7 @@ def maintain_update_history(transactions, previous_pointers):
 
             # history found so save previous data in same transaction
             history_found[0]['previous_data']=transaction
-            
+          
             # call same update history function recursiverly to check the previous history of that found transaction, e.g 1, 2, 3
             maintain_update_history(history_found, previous_pointers)
         # history not found so save transaction in transaction_history variable
