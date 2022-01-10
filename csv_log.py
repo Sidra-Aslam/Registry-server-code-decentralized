@@ -224,11 +224,17 @@ class CSVLogger(object):
                             'DhtRead':'DHT read time',
                             'CreateRing':'Ring creation',
                             'VerifyRing':'Ring verification time',
+                            'MetadataDateQuery':'Metadata date query',
+                            'MetadataPropertyQuery':'Metadata property query',
+                            'MetadataRecent':'Metadata query to return latest data',
+                            'MetadataQueryOverallTime':'Metadata overall time (date and property)',
+                            'MaintainUpdateHistoryTime':"Time to maintain pointer history",
                             'OverallTime':'Overall time' 
                             }, axis='columns')
             # copy dataframe with ordered columns
-            df = df[['Time to verify permission','Blockchain read time', 'Encryption/Decryption time', 
-            'DHT read time', 'Ring creation', 'Ring verification time',  'Overall time']].copy()
+            df = df[['Time to verify permission','Blockchain read time', 'Encryption/Decryption time', 'DHT read time', 'Ring creation', 
+            'Ring verification time', 'Metadata date query','Metadata property query','Metadata query to return latest data',
+            'Metadata overall time (date and property)','Time to maintain pointer history', 'Overall time']].copy()
             # calcuation averate, st.d, min, max
             avgVal = df.mean()
             stdVal = df.std()
@@ -281,6 +287,41 @@ class CSVLogger(object):
             # save csv
             # df.to_csv("csv_files/delete_data.csv")
             with pd.ExcelWriter("csv_files/delete_data.xlsx") as writer:
+                df.to_excel(writer, float_format="%.8f")
+        except Exception as e:
+            print(e)
+        finally:
+            # clear variables after csv is saved 
+            cls.timeList=[]
+            cls.timeObj={}
+
+    # method to create csv for initialization (registry server registeration, peer list, copy blockchain)
+    @classmethod
+    def initialization_csv(cls):
+        try:
+            # create dataframe from list and rename column names
+            df = pd.DataFrame(cls.timeList).rename({'RegistryServerConnectTime': 'Time to connect with registery server and get peer list', 
+                            'BlockchainCopyTime':'Blockchain copy time',
+                            'OverallTime':'Overall time' 
+                            }, axis='columns')
+            # copy dataframe with ordered columns
+            df = df[['Time to connect with registery server and get peer list', 'Blockchain copy time', 'Overall time']].copy()
+            # calcuation averate, st.d, min, max
+            avgVal = df.mean()
+            stdVal = df.std()
+            minVal = df.min()
+            maxVal = df.max()
+            
+            # calcuation averate, st.d, min, max
+            df.loc['Average'] = avgVal 
+            df.loc['St Deviation'] = stdVal 
+            df.loc['Min'] = minVal
+            df.loc['Max'] = maxVal 
+            # apply formatting
+            # df = df.applymap("{:.8f}".format)
+            # save csv
+            # df.to_csv("csv_files/delete_data.csv")
+            with pd.ExcelWriter("csv_files/initialization.xlsx") as writer:
                 df.to_excel(writer, float_format="%.8f")
         except Exception as e:
             print(e)

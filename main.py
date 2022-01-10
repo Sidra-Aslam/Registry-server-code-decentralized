@@ -19,7 +19,7 @@ from multiprocessing import Process
 import re
 from datetime import datetime
 
-#localhost:8098/chain endpoint
+
 test_run = 1
 
 data_schema = None
@@ -95,7 +95,7 @@ def peers():
     global blockChainManager
     global ring_manager
     global my_actors_tree
-    
+
     peer_list = list(request.get_json())
     # remove my endpoint from peer list
     peer_list = [p for p in peer_list if p['client_address'] != my_endpoint]
@@ -139,14 +139,22 @@ def chain(actor=None):
         if (any(c['client_id'] == requester['client_id'] for c in my_actors_tree) == False):
             return jsonify({'error':'Invalid data request'})
 
+        CSVLogger.timeObj['MaintainUpdateHistoryTime']=0
         # decrypt owner data
         all_data = read_my_data()
         filtered_data = []
+
+        CSVLogger.timeObj['MetadataDateQuery'] = 0
+        CSVLogger.timeObj['MetadataPropertyQuery'] = 0
+        CSVLogger.timeObj['MetadataRecent'] = 0
+        CSVLogger.timeObj['MetadataQueryOverallTime']=0
         if(len(all_data)>0):
+            metadata_query_overalltime = time.perf_counter()
             # validate meta data query if requester has provided valid properties
             metadata_query = validate_metadata_query(requester['metadata_query'])
             filtered_data = search_metadata_query(all_data, metadata_query)
-
+            CSVLogger.timeObj['MetadataQueryOverallTime'] = (time.perf_counter()-metadata_query_overalltime)
+        
         # iterate all data/transactions
         for data in filtered_data:
             if(len(data)>1):
@@ -242,6 +250,7 @@ def search_metadata_query(all_data, query):
     filtered_data = []
     # conditions for date and date criteria
     if (query['date'] != ''):
+        metadata_date_query_time=time.perf_counter()
         for data in all_data:
             # date criteria is exact so match the date of block and query date are same
             if(query['date_criteria'] == 'exact' and datetime.strptime(data['meta-data']['data-entry-date'], "%Y-%m-%d") == query['date']):
@@ -250,13 +259,18 @@ def search_metadata_query(all_data, query):
                 filtered_data.append(data)
             elif(query['date_criteria'] == 'after' and datetime.strptime(data['meta-data']['data-entry-date'], "%Y-%m-%d") > query['date']):
                 filtered_data.append(data)
+        CSVLogger.timeObj['MetadataDateQuery'] = (time.perf_counter()-metadata_date_query_time)
+        
     else:
+        metadata_recent_query_time = time.perf_counter()
         # user have not provided any date so return last data (recent)
         filtered_data.append(all_data[-1])
-    
+        CSVLogger.timeObj['MetadataRecent'] = (time.perf_counter()-metadata_recent_query_time)
+
     # condition for schema property
     prop = query['property'] 
     if(prop !=''):
+        metadata_property_query_time = time.perf_counter()
         filtered_properties=[]
         for data in filtered_data:
             if (prop in data['private']):
@@ -265,7 +279,8 @@ def search_metadata_query(all_data, query):
                 filtered_properties.append(data['sensitive'][prop])
             elif (prop in data['public']):
                 filtered_properties.append(data['public'][prop])
-
+        CSVLogger.timeObj['MetadataPropertyQuery'] = (time.perf_counter()-metadata_property_query_time)
+        
         return filtered_properties
     else:
         # if user has not any scema_property then return all data (sensitive and public)
@@ -343,8 +358,22 @@ def initialize_blockchain():
 
 # main component initializer
 def initialize_components():
-    register()
-    initialize_blockchain()
+    # clear time object for each run
+    CSVLogger.timeObj = {}
+    # repeat the process n times
+    for i in range(1):
+
+        reg_server_start = time.perf_counter()
+        register()
+        CSVLogger.timeObj['RegistryServerConnectTime'] = (time.perf_counter() - reg_server_start)
+        
+        blockchain_start = time.perf_counter()
+        initialize_blockchain()
+        CSVLogger.timeObj['BlockchainCopyTime'] = (time.perf_counter() - blockchain_start)
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter() - reg_server_start)
+        CSVLogger.save_time()
+    
+    CSVLogger.initialization_csv()
 
 # function to convert input values into json format
 # value type=int,float
@@ -688,6 +717,12 @@ def read_data():
                     CSVLogger.timeObj['DhtRead'] =  timeObj['DhtRead']
                     CSVLogger.timeObj['BlockchainReadTime'] =  timeObj['BlockchainReadTime']
                     
+                    CSVLogger.timeObj['MetadataDateQuery'] = timeObj['MetadataDateQuery']
+                    CSVLogger.timeObj['MetadataPropertyQuery'] = timeObj['MetadataPropertyQuery']
+                    CSVLogger.timeObj['MetadataRecent'] = timeObj['MetadataRecent']
+                    CSVLogger.timeObj['MetadataQueryOverallTime'] = timeObj['MetadataQueryOverallTime']
+                    CSVLogger.timeObj['MaintainUpdateHistoryTime'] = timeObj['MaintainUpdateHistoryTime']
+                    
                     # verify ring signature
                     isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
                     if(isVerified is True):
@@ -806,7 +841,7 @@ def read_my_data():
         transactions.extend(block.transactions)
     
     CSVLogger.timeObj['BlockchainReadTime'] = (time.perf_counter()-bc_start_time)
-
+    
     # current actor's transactions, and match current client id from metedatadata and then if match then transaction
     transactions = [t for t in transactions if t['meta-data']['client-id'] == client_id]
     # decrypt all transactions
@@ -822,17 +857,21 @@ def read_my_data():
         if data is not None:
             decrypted_data.append(data)
 
+    update_history_time = time.perf_counter()
     # maintain transactions history by checking previous pointer
     decrypted_data = maintain_update_history(decrypted_data, [])
+    # mintain pointer time
+    CSVLogger.timeObj['MaintainUpdateHistoryTime'] = (time.perf_counter()-update_history_time)
+    
     return decrypted_data
 
-# manage previos pointer and new pointer in BC (transaction = all blockchain transactions)
+# manage previos pointer and new pointer in BC
 def maintain_update_history(transactions, previous_pointers):
     transactions_history = []
     
-    # pseudo code (iterate all transactions one by one)
+    # pseudo code
     for transaction in transactions:
-        # check if any previouse pointer exists in the transactions(match previous pointer with currrent pointer/data)
+        # check if any previouse pointer exists in the transactions(match previous pointer with currrent data)
         history_found = [t for t in transactions if t['meta-data']['previous_pointer'] == transaction['data']]
         # history found so process it recursiverly
         if len(history_found)>0:
@@ -840,7 +879,7 @@ def maintain_update_history(transactions, previous_pointers):
 
             # history found so save previous data in same transaction
             history_found[0]['previous_data']=transaction
-          
+            
             # call same update history function recursiverly to check the previous history of that found transaction, e.g 1, 2, 3
             maintain_update_history(history_found, previous_pointers)
         # history not found so save transaction in transaction_history variable
