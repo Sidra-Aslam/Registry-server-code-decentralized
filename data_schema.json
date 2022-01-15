@@ -1,71 +1,67 @@
 {
-    "government": {
+    "wood_cutting": {
+        "private": {
+            "Location_private_privacy_level": ""
+        },
+        "sensitive": {
+            "Date_of_cutting_trees_sensitive_privacy_level": ""
+        },
+        "public": {
+            "wood_log_type_public_privacy_level": ""
+        }
+    },
+    "transport": {
+        "private": {
+            "pickup_place_private_privacy_level": ""
+        },
+        "sensitive": {
+            "Delivery_place_sensitive_privacy_level": "",
+            "pickup_date": ""
+        },
+        "public": {
+            "Dellivery_date_public_privacy_level": ""
+        }
+    },
+    "warehouse_manager": {
+        "private": {
+            "product_storage_location_private_privacy_level": ""
+        },
+        "sensitive": {
+            "free_storage_space_quantity_sensitive_privacy_level": ""
+        },
+        "public": {
+            "product_processed_public_privacy_level": ""
+        }
+    },
+    "Furniture_assembly": {
+        "private": {
+            "number_of_furniture_items_private_privacy_level": ""
+        },
+        "sensitive": {
+            "furniture_design_sensitive_privacy_level": ""
+        },
+        "public": {
+            "furniture_name_public_privacy_level": ""
+        }
+    },
+    "Furniture_shop": {
         "private": {},
         "sensitive": {
-            "CityScaleEnergy_sensitive_privacy_level": {}
+            "furniture_purchase_date_and_time_sensitive_privacy_level": ""
         },
         "public": {
-            "GrantAmount_public_privacy_level": ""
+            "furniture_quality_public_privacy_level": ""
         }
     },
-    "dso": {
+    "customer": {
         "private": {
-            "DistributionLosses_private_privacy_level": {}
+            "payment_details_private_privacy_level": ""
         },
         "sensitive": {
-            "EnergyProduction_sensitive_privacy_level": {}
+            "style_sensitive_privacy_level": ""
         },
         "public": {
-            "GridBalance_public_privacy_level": {}
-        }
-    },
-    "community": {
-        "private": {
-            "ConsumerId_private_privacy_level": "",
-            "PerformanceDataForPowerPlant_private_privacy_level": {}
-        },
-        "sensitive": {
-            "EnergyProduction_sensitive_privacy_level": {}
-        },
-        "public": {
-            "ShareOfRenewables_public_privacy_level": {}
-        }
-    },
-    "building": {
-        "private": {
-            "ConsumerId_private_privacy_level": "",
-            "ThermalTransmittance_private_privacy_level": {}
-        },
-        "sensitive": {
-            "EnergyConsumption_sensitive_privacy_level": {}
-        },
-        "public": {
-            "BuildingLocation_public_privacy_level": ""
-        }
-    },
-    "household": {
-        "private": {
-            "ConsumerId_private_privacy_level": "",
-            "PerformanceDataForAppliances_private_privacy_level": {}
-        },
-        "sensitive": {
-            "MeasureConsumption_sensitive_privacy_level": {}
-        },
-        "public": {
-            "HouseholdSize_public_privacy_level": ""
-        }
-    },
-    "occupant": {
-        "private": {
-            "ConsumerId_private_privacy_level": "",
-            "ComfortPreference_private_privacy_level": {},
-            "Temperature_private_privacy_level": ""
-        },
-        "sensitive": {
-            "Schedule_sensitive_privacy_level": {}
-        },
-        "public": {
-            "ConsumptionMix_public_privacy_level": {}
+            "wood_type_public_privacy_level": ""
         }
     }
 }

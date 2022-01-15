@@ -107,11 +107,25 @@ def peers():
     ring_manager = RingManager(encryptionManager.public_key, encryptionManager.private_key, peer_list)
     
     # check actors that are linked with me/my client id/within my tree to verify relation
-    my_actors_tree = [p for p in peer_list if is_relation_valid(p['client_id'])]
+    my_actors_tree = [p for p in peer_list if is_relation_valid(p)]
     my_actors_tree.append({"client_address": my_endpoint, "client_name": client_name, 
             "public_key": encryptionManager.public_key, "client_id":client_id})
     print('Peer list updated')
     return ('', 200)
+
+# check if other client id is linked with me (is in same tree/hierarchy)
+def is_relation_valid(other_client) -> bool:
+    global client_id
+    global client_name
+    
+    # split current client id on hyphen i.e  wood_cutting0-0
+    # i.e requester is  wood_cutting1-0, in this case this is invalid company to communicate
+    # because first part is mismatched with represents the company
+    client_id_identifier = client_id.split('-')[0]
+    if(other_client['client_name'] == client_name and other_client['client_id'].startswith(client_id_identifier) == False):
+        return False
+    else:
+        return True
 
 # api /chain to return blockchain copy or replicate block on peers
 # this will be called from any other client
@@ -223,13 +237,12 @@ def chain(actor=None):
 # algo to validate query parameters (schema_property, date, date_citeria)
 def validate_metadata_query(query):
     try:
-        # check date format if it is correct i.e 2021-10-16 
-        if(datetime.strptime(query['date'], "%Y-%m-%d")):
-            # convert date string to date object
-            query['date'] = datetime.strptime(query['date'], "%Y-%m-%d")
+        # convert and validate query date to date and time to check is format is valid
+        query['date'] = datetime.fromisoformat(query['date'])
     except:
-        # date is invalid so consider no date for searching
-        query['date'] = ''
+            # if format is not valid then set empty string    
+            query['date'] = ''
+    
      # validate date criteria
     if query['date_criteria'] not in ('before','after','exact'):
         query['date'] = ''
@@ -252,13 +265,17 @@ def search_metadata_query(all_data, query):
     if (query['date'] != ''):
         metadata_date_query_time=time.perf_counter()
         for data in all_data:
+            # extract date and time from meta-data
+            data_entry_datetime = datetime.fromisoformat(data['meta-data']['data-entry-date']+' '+data['meta-data']['data-entry-time'])
+
             # date criteria is exact so match the date of block and query date are same
-            if(query['date_criteria'] == 'exact' and datetime.strptime(data['meta-data']['data-entry-date'], "%Y-%m-%d") == query['date']):
+            if(query['date_criteria'] == 'exact' and data_entry_datetime.date() == query['date'].date()):
                 filtered_data.append(data)
-            elif(query['date_criteria'] == 'before' and datetime.strptime(data['meta-data']['data-entry-date'], "%Y-%m-%d") < query['date']):
+            elif(query['date_criteria'] == 'before' and data_entry_datetime < query['date']):
                 filtered_data.append(data)
-            elif(query['date_criteria'] == 'after' and datetime.strptime(data['meta-data']['data-entry-date'], "%Y-%m-%d") > query['date']):
+            elif(query['date_criteria'] == 'after' and data_entry_datetime > query['date']):
                 filtered_data.append(data)
+            
         CSVLogger.timeObj['MetadataDateQuery'] = (time.perf_counter()-metadata_date_query_time)
         
     else:
@@ -285,29 +302,6 @@ def search_metadata_query(all_data, query):
     else:
         # if user has not any scema_property then return all data (sensitive and public)
         return filtered_data
-
-# check if other client id is linked with me (is in same tree/hierarchy)
-def is_relation_valid(other_client_id) -> bool:
-    global client_id
-    # find indexes in ids, we will use logic on these ids to identify 
-    # if the current client id and other client id are in same relation
-    other_client_indexes = re.findall(r'\d+', other_client_id)
-    client_indexes = re.findall(r'\d+', client_id)
-    # check id indexes length, if they are equal then remove last index
-    if(len(other_client_indexes)==len(client_indexes)):
-        other_client_indexes.pop()
-        client_indexes.pop()
-    elif(len(other_client_indexes)>len(client_indexes)):
-        # consider client index length
-        other_client_indexes = other_client_indexes[:len(client_indexes)]
-    else:
-        # consider owner index length
-        client_indexes = client_indexes[:len(other_client_indexes)]
-    
-    if(other_client_id == client_id or other_client_indexes == client_indexes):
-        return True
-    else:
-        return False
 
 # function to connect with registry server
 def register():
@@ -408,170 +402,31 @@ def format_key_value(input_text, value_type):
     
     return key_values
 
-# data input function for occupant actor
-def occupant_data_input(block=None):
+# data input function
+def data_input(block=None):
     # call get_data_schema function to return data schema
-    occupant_schema = get_data_schema()
+    data_schema = get_data_schema()
 
-    # take data input as private data from actor
-    while len(occupant_schema['private']['ConsumerId_private_privacy_level']) == 0:
-        occupant_schema['private']['ConsumerId_private_privacy_level'] = input("Consumer Id: ")
-    
-    print("Enter multiple inputs in format as -> key : value, ")
-    while len(occupant_schema['private']['ComfortPreference_private_privacy_level']) == 0:
-        input_text = input('Enter Comfort Preference as key value pairs (text, float):')
-        occupant_schema['private']['ComfortPreference_private_privacy_level'] = format_key_value(input_text, 'text')
+    # iterate private, public, sensitive data from data_schema
+    for privacy_level, data in data_schema.items():
+        # iterate all properties in data
+        for property, value in data.items():
+            # check if property value type is string
+            if(isinstance(value, str)):
+                # take input from user for property
+                while len(data_schema[privacy_level][property]) == 0:
+                    data_schema[privacy_level][property] = input('Enter '+property+': ')
+            
+            # check if property value type is dict object (for multiple inputs)
+            elif(isinstance(value, dict)):
+                print("Enter multiple inputs in format as -> key : value, ")
+                while len(data_schema[privacy_level][property]) == 0:
+                    # take multiple inputs (key value pairs) in comma separated format
+                    input_text = input('Enter '+property+' as key value pairs (key:value,): ')
+                    data_schema[privacy_level][property] = format_key_value(input_text, 'text')
+            
+    create_data(data_schema, block)
 
-    while len(occupant_schema['private']['Temperature_private_privacy_level']) == 0:
-        occupant_schema['private']['Temperature_private_privacy_level'] = input("Temperature: ")
-    
-    # take privacy sensitive data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(occupant_schema['sensitive']['Schedule_sensitive_privacy_level']) == 0:
-        input_text = input('Enter Schedule as key value pairs (text, bool -> 0/1):')
-        # convert input values to json format with int conversion
-        occupant_schema['sensitive']['Schedule_sensitive_privacy_level'] = format_key_value(input_text, 'int')
-
-
-    # take public data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(occupant_schema['public']['ConsumptionMix_public_privacy_level']) == 0:
-        input_text = input('Enter Consumption Mix as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        occupant_schema['public']['ConsumptionMix_public_privacy_level'] = format_key_value(input_text, 'float')
-
-    create_data(occupant_schema, block)
-
-# data input function for household actor
-def household_data_input(block=None):
-    household_schema = get_data_schema()
-    
-    # take private data from actor
-    while len(household_schema['private']['ConsumerId_private_privacy_level']) == 0:
-        household_schema['private']['ConsumerId_private_privacy_level'] = input("Consumer Id: ")
-    
-    print("Enter multiple inputs in format as -> key : value, ")
-    while len(household_schema['private']['PerformanceDataForAppliances_private_privacy_level']) == 0:
-        input_text = input('Enter Performance Data For Appliances as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        household_schema['private']['PerformanceDataForAppliances_private_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take privacy sensitive data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(household_schema['sensitive']['MeasureConsumption_sensitive_privacy_level']) == 0:
-        input_text = input('Enter Measure Consumption as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        household_schema['sensitive']['MeasureConsumption_sensitive_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take public data from actor
-    while len(household_schema['public']['HouseholdSize_public_privacy_level']) == 0:
-        household_schema['public']['HouseholdSize_public_privacy_level'] = input("Household Size: ")
-    
-
-    create_data(household_schema, block)
-    
-# data input function for building actor
-def building_data_input(block=None):
-    building_schema = get_data_schema()
-    
-    # take private data from actor
-    while len(building_schema['private']['ConsumerId_private_privacy_level']) == 0:
-        building_schema['private']['ConsumerId_private_privacy_level'] = input("Consumer Id: ")
-    
-    print("Enter multiple inputs in format as -> key : value, ")
-    while len(building_schema['private']['ThermalTransmittance_private_privacy_level']) == 0:
-        input_text = input('Enter Thermal transmittance of building envelope as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        building_schema['private']['ThermalTransmittance_private_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take privacy sensitive data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(building_schema['sensitive']['EnergyConsumption_sensitive_privacy_level']) == 0:
-        input_text = input('Enter Energy Consumption as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        building_schema['sensitive']['EnergyConsumption_sensitive_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take public data from actor
-    while len(building_schema['public']['BuildingLocation_public_privacy_level']) == 0:
-        building_schema['public']['BuildingLocation_public_privacy_level'] = input("Building Location: ")
-    
-    create_data(building_schema, block)
-    
-# data input function for community actor
-def community_data_input(block=None):
-    community_schema = get_data_schema()
-    
-    # take private data from actor
-    while len(community_schema['private']['ConsumerId_private_privacy_level']) == 0:
-        community_schema['private']['ConsumerId_private_privacy_level'] = input("Consumer Id: ")
-    
-    print("Enter multiple inputs in format as -> key : value, ")
-    while len(community_schema['private']['PerformanceDataForPowerPlant_private_privacy_level']) == 0:
-        input_text = input('Enter Performance data for power plant as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        community_schema['private']['PerformanceDataForPowerPlant_private_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take privacy sensitive data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(community_schema['sensitive']['EnergyProduction_sensitive_privacy_level']) == 0:
-        input_text = input('Enter Energy Production as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        community_schema['sensitive']['EnergyProduction_sensitive_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take public data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(community_schema['public']['ShareOfRenewables_public_privacy_level']) == 0:
-        input_text = input('Enter Share of renewables in energy production as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        community_schema['public']['ShareOfRenewables_public_privacy_level'] = format_key_value(input_text, 'float')
-    
-    create_data(community_schema, block)
-    
-# data input function for dso actor
-def dso_data_input(block=None):
-    dso_schema = get_data_schema()
-    
-    # take private data from actor
-    print("Enter multiple inputs in format as -> key : value, ")
-    while len(dso_schema['private']['DistributionLosses_private_privacy_level']) == 0:
-        input_text = input('Enter Distribution Losses as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        dso_schema['private']['DistributionLosses_private_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take privacy sensitive data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(dso_schema['sensitive']['EnergyProduction_sensitive_privacy_level']) == 0:
-        input_text = input('Enter Energy Production as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        dso_schema['sensitive']['EnergyProduction_sensitive_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take public data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(dso_schema['public']['GridBalance_public_privacy_level']) == 0:
-        input_text = input('Enter GridBalance as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        dso_schema['public']['GridBalance_public_privacy_level'] = format_key_value(input_text, 'float')
-    
-    create_data(dso_schema, block)
-    
-# data input function for government actor
-def government_data_input(block=None):
-    government_schema = get_data_schema()
-    
-    # take privacy sensitive data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(government_schema['sensitive']['CityScaleEnergy_sensitive_privacy_level']) == 0:
-        input_text = input('Enter City Scale Energy as key value pairs (text, float):')
-        # convert input values to json format with float conversion
-        government_schema['sensitive']['CityScaleEnergy_sensitive_privacy_level'] = format_key_value(input_text, 'float')
-
-    # take public data from actor
-    print("Enter multiple inputs in format as -> key : value,")
-    while len(government_schema['public']['GrantAmount_public_privacy_level']) == 0:
-        government_schema['public']['GrantAmount_public_privacy_level'] = input("Grant Amount: ")
-    
-    create_data(government_schema, block)
-    
 # store data method
 # pointer and meta data will be stored on blockchain
 # actual data will be stored on dht
@@ -667,7 +522,7 @@ def read_data():
     
     # ask metadata query parameters i.e 
     schema_property = input("Enter schema property: ")
-    date = input("Enter date to be searched 'yyyy-mm-dd': ")
+    date = input("Enter date and time to be searched 'yyyy-mm-dd hh:mm': ")
     date_criteria=''
     if(date != ''):
         date_criteria = input("Enter date match criteria (before,after,exact): ")
@@ -916,20 +771,7 @@ def display_menu():
             # create data
             # verify permission
             if(rbac.verify_permission(client_role, 'write', 'blockchain')):
-                # display menu based on actor name
-                if(client_name == 'occupant'):
-                    occupant_data_input()
-                elif(client_name == 'household'):
-                    household_data_input()
-                elif(client_name == 'building'):
-                    building_data_input()
-                elif(client_name == 'community'):
-                    community_data_input()
-                elif(client_name == 'dso'):
-                    dso_data_input()
-                elif(client_name == 'government'):
-                    government_data_input() 
-
+                data_input()
             else:
                 print('You are not authorized to perform this action.')
             
@@ -975,18 +817,8 @@ def display_menu():
                         # check if current user id is not owner of this data
                         if block['meta-data']['client-id'] != client_id:
                             print('You can not modify this data.')
-                        elif(client_name == 'occupant'):
-                            occupant_data_input(block)
-                        elif(client_name == 'household'):
-                            household_data_input(block)
-                        elif(client_name == 'building'):
-                            building_data_input(block)
-                        elif(client_name == 'community'):
-                            community_data_input(block)
-                        elif(client_name == 'dso'):
-                            dso_data_input(block)
-                        elif(client_name == 'government'):
-                            government_data_input(block)
+                        else:
+                            data_input(block)
             else:
                 print('You are not authorized to perform this action.')
 
@@ -1060,10 +892,10 @@ def display_menu():
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=8090, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='occupant', help='Enter client name')
+    parser.add_argument('-p', '--port', default=8020, type=int, help='port to listen on')
+    parser.add_argument('-c', '--client', default='wood_cutting', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
-    parser.add_argument('-id', '--id', default='government0-building0-household1-occupant2', help='Enter role name')
+    parser.add_argument('-id', '--id', default='wood_cutting1-3', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port

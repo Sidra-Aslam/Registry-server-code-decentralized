@@ -6,18 +6,16 @@ from csv_log import CSVLogger
 class RbacManager:
     def __init__(self):
         # list of clients
-        self.clients = ["occupant", "household", "building", "community",  "dso", "government"]
+        self.clients = ["wood_cutting", "transport", "warehouse_manager", "Furniture_assembly",  "Furniture_shop", "customer"]
         
         # business partners rules definition
         self.business_partners=[]
-        self.business_partners.append(("community","dso"))
-        self.business_partners.append(("community","government"))
-        self.business_partners.append(("household","building"))
-        self.business_partners.append(("occupant","building"))
-        self.business_partners.append(("occupant","household"))
-        self.business_partners.append(("occupant","community"))
-        self.business_partners.append(("household","community"))
-
+        self.business_partners.append(("wood_cutting","transport"))
+        self.business_partners.append(("transport","warehouse_manager"))
+        self.business_partners.append(("warehouse_manager","Furniture_assembly"))
+        self.business_partners.append(("Furniture_assembly","Furniture_shop"))
+        self.business_partners.append(("Furniture_shop","customer"))
+        
         self.client_names = ", ".join(self.clients)
 
         # create rbac object of RBAC library
