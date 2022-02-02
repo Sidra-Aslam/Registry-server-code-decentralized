@@ -133,6 +133,7 @@ class EncryptionManager:
          ),
          hashes.SHA256()
       )
+      print('private key signature created')
       # return signature in string format
       return signature.hex()
    
@@ -156,7 +157,7 @@ class EncryptionManager:
             ),
             hashes.SHA256()
          )
-         print('Signature verified')
+         print('Signature verified with public key')
          return True
       except:
          print('Invalid signature')

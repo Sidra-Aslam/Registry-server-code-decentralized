@@ -144,14 +144,31 @@ def chain(actor=None):
         
         return jsonify(chain_data)
     
-    # for requester
+    # for requester to read/return the data
     # post method with actor name so return the data after tree_verification
     elif request.method == 'POST' and actor is not None:
-        # get requester role and name
-        requester = request.get_json()
+        # get requester role and name, signature --> query receive
+        data = request.get_json()
+
+        requester = json.loads(data['data'])
+
+        # current peer information, if owner read his own data
+        peer = [{"client_address": my_endpoint, "client_id": client_id, 'public_key': encryptionManager.public_key}]
+        
+        # clinet_name is a current login user. and requester is a user who reads data
+        # if data owner is not current user then look for owner endpoint from peer_list
+        if client_id != requester['client_id']:
+            # get one peer endpoint from peer_list to find out data requester's enspoint/ return requester's peer information 
+            peer = [p for p in my_actors_tree if p['client_id'] == requester['client_id']]
+        # verify data(query) and signature with requester's public key
+        isSignVerified = encryptionManager.verify_sign(data['data'], data['sign'], peer[0]['public_key'])
+        if(isSignVerified==False):
+            print('sign not verified.')
+            return 'Sign not verified.', 500
+
         # owner will verify if requester client id iis in my_actor_tree or not
         if (any(c['client_id'] == requester['client_id'] for c in my_actors_tree) == False):
-            return jsonify({'error':'Invalid data request'})
+            return 'Invalid Request', 500
 
         CSVLogger.timeObj['MaintainUpdateHistoryTime']=0
         # decrypt owner data
@@ -186,16 +203,6 @@ def chain(actor=None):
                     del data['data']
                     del data['meta-data']
 
-        
-        # current peer information, if owner read his own data
-        peer = [{"client_address": my_endpoint, "client_id": client_id, 'public_key': encryptionManager.public_key}]
-        
-        # clinet_name is a current login user. and requester is a user who reads data
-        # if data owner is not current user then look for owner endpoint from peer_list
-        if client_id != requester['client_id']:
-            # get one peer endpoint from peer_list to find out data requester's enspoint/ return requester's peer information 
-            peer = [p for p in my_actors_tree if p['client_id'] == requester['client_id']]
-        
         if len(peer) > 0:
             # extract requester's public key from peer list
             requester_public_key = peer[0]['public_key']
@@ -557,9 +564,15 @@ def read_data():
             try:
                 print('sending data read request to client id: '+actor[0]['client_id'])
                 headers = {'Content-Type': "application/json"}
-                # send data request to actor by calling /chain api+actor name
+
+               # create query to read data
+                data = json.dumps({'role': client_role, 'client_id':client_id, 'metadata_query':metadata_query})
+                # Create signature with requester's private key
+                sign = encryptionManager.create_sign(data, encryptionManager.private_key)
+
+                # send data request with signature to data owner by calling /chain api+actor name
                 response = requests.post(actor[0]['client_address']+ "/chain/"+actor[0]['client_name'], 
-                    data=json.dumps({'role': client_role, 'client_id':client_id, 'metadata_query':metadata_query}), headers=headers)
+                    data=json.dumps({'data': data, 'sign':sign}), headers=headers)
                 
                 if response.ok:
                     # response object return from actor/owner
@@ -596,9 +609,11 @@ def read_data():
                         print()
                     
                 else:
+                    print(response.text)
                     print('Failed to read data from client id: ' + actor[0]['client_id'])
 
             except:
+                print(response.text)
                 print('Unable to read data')
                 print(actor[0]['client_id'] + ' peer might be unavailable.')
             
@@ -895,7 +910,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', default=8020, type=int, help='port to listen on')
     parser.add_argument('-c', '--client', default='wood_cutting', help='Enter client name')
     parser.add_argument('-r', '--role', default='owner', help='Enter role name')
-    parser.add_argument('-id', '--id', default='wood_cutting1-3', help='Enter role name')
+    parser.add_argument('-id', '--id', default='wood_cutting0-4', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port
