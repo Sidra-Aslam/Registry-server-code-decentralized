@@ -46,7 +46,7 @@ The authorized requester can read data and verify the ring signature
 
 2. Read data
     > This option is used to read data. Program will ask user to enter block number then block is searched in user's local blockchain copy, if block is found program will perform following actions:
-    * Check owner name in meta data
+  
     * Send data read request to owner
     * Owner reads blockchain for the requested data
     * Owner reads data from dht
@@ -59,7 +59,7 @@ The authorized requester can read data and verify the ring signature
  
 3. Update data
     > This option is used to modify data on dht. Program will ask user to enter block number to modify data then block is searched in user's local blockchain copy, if block is found program will perform following actions:
-    * Check owner name in meta data
+   
     * if owner name is same as current user then program will ask to enter new data
     * Enter encryption type
     * Encrypt data based on selected option
@@ -67,7 +67,7 @@ The authorized requester can read data and verify the ring signature
     
 4. Delete data
     > This option is used to delete data on dht. Program will ask user to enter block number to delete data then block is searched in user's local blockchain copy, if block is found program will perform following actions:
-        * Check owner name in meta data
+        
         * if owner name is same as current user then program will insert special veriable 'DELETED' on dht against the same pointer
 
 5. Display peers
