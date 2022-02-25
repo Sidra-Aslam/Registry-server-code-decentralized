@@ -1,0 +1,746 @@
+<?xml version="1.0"?>
+<Ontology xmlns="http://www.w3.org/2002/07/owl#"
+     xml:base="https://osebje.famnit.upr.si/~michael.mrissa/ontology/AccessControl.owl"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     ontologyIRI="https://osebje.famnit.upr.si/~michael.mrissa/ontology/AccessControl.owl">
+    <Prefix name="" IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl"/>
+    <Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>
+    <Prefix name="rdf" IRI="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+    <Prefix name="xml" IRI="http://www.w3.org/XML/1998/namespace"/>
+    <Prefix name="xsd" IRI="http://www.w3.org/2001/XMLSchema#"/>
+    <Prefix name="rdfs" IRI="http://www.w3.org/2000/01/rdf-schema#"/>
+    <Declaration>
+        <Class IRI="#Actor"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Location"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Resource"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Role"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasDeletePermission"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasGetPermission"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasPermission"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasPostPermission"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasPutPermission"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#hasRole"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Alice"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Bob"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Customer"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#DHT"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#David"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Eric"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#FurnitureShopOwner"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Izola"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#John"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Koper"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Piran"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Tim"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Transporter"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Trieste"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#WarehouseManager"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="#Woodcutter"/>
+    </Declaration>
+    <Declaration>
+        <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+    </Declaration>
+    <ClassAssertion>
+        <Class IRI="#Actor"/>
+        <NamedIndividual IRI="#Alice"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Actor"/>
+        <NamedIndividual IRI="#Bob"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Role"/>
+        <NamedIndividual IRI="#Customer"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Resource"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Actor"/>
+        <NamedIndividual IRI="#David"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Actor"/>
+        <NamedIndividual IRI="#Eric"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Role"/>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Role"/>
+        <NamedIndividual IRI="#FurnitureShopOwner"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Location"/>
+        <NamedIndividual IRI="#Izola"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Actor"/>
+        <NamedIndividual IRI="#John"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Location"/>
+        <NamedIndividual IRI="#Koper"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Location"/>
+        <NamedIndividual IRI="#Piran"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Actor"/>
+        <NamedIndividual IRI="#Tim"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Role"/>
+        <NamedIndividual IRI="#Transporter"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Location"/>
+        <NamedIndividual IRI="#Trieste"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Role"/>
+        <NamedIndividual IRI="#WarehouseManager"/>
+    </ClassAssertion>
+    <ClassAssertion>
+        <Class IRI="#Role"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+    </ClassAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <NamedIndividual IRI="#Alice"/>
+        <NamedIndividual IRI="#Bob"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#Alice"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasRole"/>
+        <NamedIndividual IRI="#Alice"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <NamedIndividual IRI="#Bob"/>
+        <NamedIndividual IRI="#Alice"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <NamedIndividual IRI="#Bob"/>
+        <NamedIndividual IRI="#John"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#Bob"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasRole"/>
+        <NamedIndividual IRI="#Bob"/>
+        <NamedIndividual IRI="#Transporter"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#Customer"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPermission"/>
+        <NamedIndividual IRI="#Customer"/>
+        <NamedIndividual IRI="#FurnitureShopOwner"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <NamedIndividual IRI="#David"/>
+        <NamedIndividual IRI="#Eric"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#David"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasRole"/>
+        <NamedIndividual IRI="#David"/>
+        <NamedIndividual IRI="#FurnitureShopOwner"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <NamedIndividual IRI="#Eric"/>
+        <NamedIndividual IRI="#David"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#Eric"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasRole"/>
+        <NamedIndividual IRI="#Eric"/>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasDeletePermission"/>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPermission"/>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPostPermission"/>
+        <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#FurnitureShopOwner"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPermission"/>
+        <NamedIndividual IRI="#FurnitureShopOwner"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <NamedIndividual IRI="#John"/>
+        <NamedIndividual IRI="#Bob"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#John"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasRole"/>
+        <NamedIndividual IRI="#John"/>
+        <NamedIndividual IRI="#WarehouseManager"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasRole"/>
+        <NamedIndividual IRI="#Tim"/>
+        <NamedIndividual IRI="#Customer"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#Transporter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPermission"/>
+        <NamedIndividual IRI="#Transporter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPostPermission"/>
+        <NamedIndividual IRI="#Transporter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPutPermission"/>
+        <NamedIndividual IRI="#Transporter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasDeletePermission"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPermission"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+        <NamedIndividual IRI="#Trieste"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPostPermission"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+        <NamedIndividual IRI="#Trieste"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyAssertion>
+        <ObjectProperty IRI="#hasPutPermission"/>
+        <NamedIndividual IRI="#Woodcutter"/>
+        <NamedIndividual IRI="#DHT"/>
+    </ObjectPropertyAssertion>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <Class IRI="#Actor"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasDeletePermission"/>
+        <Class IRI="#Role"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <Class IRI="#Actor"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <Class IRI="#Role"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasPermission"/>
+        <Class IRI="#Role"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasPostPermission"/>
+        <Class IRI="#Role"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasPutPermission"/>
+        <Class IRI="#Role"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyDomain>
+        <ObjectProperty IRI="#hasRole"/>
+        <Class IRI="#Actor"/>
+    </ObjectPropertyDomain>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasBusinessPartner"/>
+        <Class IRI="#Actor"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasDeletePermission"/>
+        <Class IRI="#Resource"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <Class IRI="#Location"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasGetPermission"/>
+        <Class IRI="#Resource"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasPermission"/>
+        <Class IRI="#Location"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasPermission"/>
+        <Class IRI="#Resource"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasPostPermission"/>
+        <Class IRI="#Location"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasPutPermission"/>
+        <Class IRI="#Location"/>
+    </ObjectPropertyRange>
+    <ObjectPropertyRange>
+        <ObjectProperty IRI="#hasRole"/>
+        <Class IRI="#Role"/>
+    </ObjectPropertyRange>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>	If Bob ‘hasBusinessPartner’ relationship with Alice then Bob is allowed to make ‘Get’ request to the resource ‘cut tress’ of Alice.</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule6</Literal>
+        </Annotation>
+        <Body>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasBusinessPartner"/>
+                <NamedIndividual IRI="#Bob"/>
+                <NamedIndividual IRI="#Alice"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Actor"/>
+                <NamedIndividual IRI="#Alice"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#Bob"/>
+                <Variable IRI="#t"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Actor"/>
+                <NamedIndividual IRI="#Bob"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="#t"/>
+            </ClassAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#Alice"/>
+                <Variable IRI="#t"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>If Bob ‘hasBusinessPartner’ relationship with John then Bob can make ‘get’ request to the resource of John</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule7</Literal>
+        </Annotation>
+        <Body>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasBusinessPartner"/>
+                <NamedIndividual IRI="#Bob"/>
+                <NamedIndividual IRI="#John"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#l"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Actor"/>
+                <NamedIndividual IRI="#Bob"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Actor"/>
+                <NamedIndividual IRI="#John"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#Bob"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#l"/>
+            </ObjectPropertyAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#John"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#l"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>	If Eric ‘hasBusinessPartner’ relationship with David then Eric has a ‘Get’ request permission to the all resources of David</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule8</Literal>
+        </Annotation>
+        <Body>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="#r"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Actor"/>
+                <NamedIndividual IRI="#Eric"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#Eric"/>
+                <Variable IRI="#r"/>
+            </ObjectPropertyAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasBusinessPartner"/>
+                <NamedIndividual IRI="#Eric"/>
+                <NamedIndividual IRI="#David"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Actor"/>
+                <NamedIndividual IRI="#David"/>
+            </ClassAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#David"/>
+                <Variable IRI="#r"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>A ‘wood cutter’, has permission to make a request ‘Post’ to their location</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule1</Literal>
+        </Annotation>
+        <Body>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#Woodcutter"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Location"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#w"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPermission"/>
+                <NamedIndividual IRI="#Woodcutter"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#w"/>
+            </ObjectPropertyAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPostPermission"/>
+                <NamedIndividual IRI="#Woodcutter"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#w"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>A ‘transporter, has permission to make a request ‘put’ to their Resource ‘location’.</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule2</Literal>
+        </Annotation>
+        <Body>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#p"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPermission"/>
+                <NamedIndividual IRI="#Transporter"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#p"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#Transporter"/>
+            </ClassAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPutPermission"/>
+                <NamedIndividual IRI="#Transporter"/>
+                <Variable IRI="https://osebje.famnit.upr.si/~fatima.amina/ontology/AccessControl.owl#p"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>A ‘furniture shop owner’ is allowed to make ‘Get’ requests to access the Resource ‘cut trees’ of a woodcutter.</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule3</Literal>
+        </Annotation>
+        <Body>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#Woodcutter"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPermission"/>
+                <NamedIndividual IRI="#FurnitureShopOwner"/>
+                <NamedIndividual IRI="#Woodcutter"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#FurnitureShopOwner"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="#d"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#FurnitureShopOwner"/>
+                <Variable IRI="#d"/>
+            </ObjectPropertyAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#Woodcutter"/>
+                <Variable IRI="#d"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>A ‘customer’ has ‘Get’ request permission to access Resource ‘wood type’ of a furniture shop.</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule5</Literal>
+        </Annotation>
+        <Body>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPermission"/>
+                <NamedIndividual IRI="#Customer"/>
+                <NamedIndividual IRI="#FurnitureShopOwner"/>
+            </ObjectPropertyAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#Customer"/>
+                <Variable IRI="#k"/>
+            </ObjectPropertyAtom>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#FurnitureShopOwner"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="#k"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#Customer"/>
+            </ClassAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasGetPermission"/>
+                <NamedIndividual IRI="#FurnitureShopOwner"/>
+                <Variable IRI="#k"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+    <DLSafeRule>
+        <Annotation>
+            <AnnotationProperty IRI="http://swrl.stanford.edu/ontologies/3.3/swrla.owl#isRuleEnabled"/>
+            <Literal datatypeIRI="http://www.w3.org/2001/XMLSchema#boolean">true</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+            <Literal>A ‘furniture assembly manager’, is allowed to make requests ‘delete’ to their resources.</Literal>
+        </Annotation>
+        <Annotation>
+            <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+            <Literal>Rule4</Literal>
+        </Annotation>
+        <Body>
+            <ClassAtom>
+                <Class IRI="#Resource"/>
+                <Variable IRI="#r"/>
+            </ClassAtom>
+            <ClassAtom>
+                <Class IRI="#Role"/>
+                <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+            </ClassAtom>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasPermission"/>
+                <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+                <Variable IRI="#r"/>
+            </ObjectPropertyAtom>
+        </Body>
+        <Head>
+            <ObjectPropertyAtom>
+                <ObjectProperty IRI="#hasDeletePermission"/>
+                <NamedIndividual IRI="#FurnitureAssemblyManager"/>
+                <Variable IRI="#r"/>
+            </ObjectPropertyAtom>
+        </Head>
+    </DLSafeRule>
+</Ontology>
+
+
+
+<!-- Generated by the OWL API (version 4.5.9.2019-02-01T07:24:44Z) https://github.com/owlcs/owlapi -->
+

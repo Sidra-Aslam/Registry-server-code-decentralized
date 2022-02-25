@@ -1,4 +1,5 @@
 #This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+from copy import deepcopy
 from operator import truediv
 from ring_manager import RingManager
 from flask import Flask, request, jsonify
@@ -8,7 +9,7 @@ import requests
 import threading
 from blockchain_manager import BlockchainManager, Block
 from encryption_manager import EncryptionManager
-from rbac_manager import RbacManager
+from access_control_ontology_manager import AccessControlOntologyManager 
 from dht_manager import DhtManager
 from kademlia.utils import digest
 from urllib.parse import urlparse
@@ -20,7 +21,7 @@ import re
 from datetime import datetime
 
 
-test_run = 1
+test_run = 5
 
 data_schema = None
 
@@ -32,8 +33,8 @@ blockChainManager = None
 # encryption manager object
 encryptionManager = None
 
-# rbac manager object
-rbac = RbacManager()
+# create AccessControlOntologyManager object
+accessControlOntologyManager = AccessControlOntologyManager()
 
 # name of current client
 client_name = None
@@ -70,7 +71,7 @@ app = Flask(__name__)
 # endpoint to return the data scehma of the current client/actor
 @app.route('/data_schema', methods=['GET'])
 def get_data_schema():
-    global client_name
+    global client_role
     # open JSON file/read JSON file
     f = open('data_schema.json',)
     # read data_schema file as an json object
@@ -79,7 +80,7 @@ def get_data_schema():
     f.close()
 
     # return current actor's schema
-    return schema[client_name]
+    return schema[client_role]
 
 # api to return public key
 # this will be called from any other client
@@ -106,26 +107,12 @@ def peers():
     # create object of ring manager using signer's private key and all public keys of other peers
     ring_manager = RingManager(encryptionManager.public_key, encryptionManager.private_key, peer_list)
     
-    # check actors that are linked with me/my client id/within my tree to verify relation
-    my_actors_tree = [p for p in peer_list if is_relation_valid(p)]
+    # copy actor list to my_actors_tree (deepcopy function is used to create new object of peer_list)
+    my_actors_tree = deepcopy(peer_list)
     my_actors_tree.append({"client_address": my_endpoint, "client_name": client_name, 
             "public_key": encryptionManager.public_key, "client_id":client_id})
     print('Peer list updated')
     return ('', 200)
-
-# check if other client id is linked with me (is in same tree/hierarchy)
-def is_relation_valid(other_client) -> bool:
-    global client_id
-    global client_name
-    
-    # split current client id on hyphen i.e  wood_cutting0-0
-    # i.e requester is  wood_cutting1-0, in this case this is invalid company to communicate
-    # because first part is mismatched with represents the company
-    client_id_identifier = client_id.split('-')[0]
-    if(other_client['client_name'] == client_name and other_client['client_id'].startswith(client_id_identifier) == False):
-        return False
-    else:
-        return True
 
 # api /chain to return blockchain copy or replicate block on peers
 # this will be called from any other client
@@ -188,20 +175,25 @@ def chain(actor=None):
         
         # iterate all data/transactions
         for data in filtered_data:
-            if(len(data)>1):
-                # role is public user
-                if requester['role'] == 'public_user':
-                    data = data['public']
-
-                # role is business partner or role is owner of other company
-                # client id condition is added to handle the case when same client requests the data who has created it
-                elif requester['role'] == 'business_partner' or (requester['role'] == 'owner' and requester['client_id'] != client_id):
-                    # remove private data from data object
+            # check if requester is not current actor
+            if(len(data) > 1 and requester['client_id'] != client_id):
+                # check if requester is bussiness parter with current actor
+                if (accessControlOntologyManager.check_business_partner(requester['client_id']) and requester['client_id'] != client_id):
                     del data['private']
                     del data['previous_data']
                     del data['previous_pointers']
                     del data['data']
                     del data['meta-data']
+                # requester is not business partner so delete all the data except public_data
+                # in this case only public data will be returned
+                else:
+                    del data['private']
+                    del data['sensitive']
+                    del data['previous_data']
+                    del data['previous_pointers']
+                    del data['data']
+                    del data['meta-data']
+                
 
         if len(peer) > 0:
             # extract requester's public key from peer list
@@ -453,10 +445,10 @@ def create_data(data, block=None):
             # simulate read and decryption time again
             read_my_data() # - required for test run only
             
-        # verify permission again 
-        rbac.verify_permission(client_role, 'write', 'blockchain') # - for test run
+        # verify permission post permission from ontology
+        accessControlOntologyManager.verify_permission('post') # - for test run
         
-        start_time = time.perf_counter() + rbac.permission_time
+        start_time = time.perf_counter() + accessControlOntologyManager.permission_time
 
         #take user id from private data
         user_id = ''
@@ -548,16 +540,11 @@ def read_data():
             CSVLogger.timeObj['DhtRead'] =  0
             CSVLogger.timeObj['BlockchainReadTime'] =  0
 
-            # simulate rbac time again 
-            rbac.verify_permission(client_role, 'read', 'blockchain') # - required for test run only
+            # simulate verification time again 
+            accessControlOntologyManager.verify_permission('get') # - required for test run only
             
             # calculate start time to read data 
-            start_time = time.perf_counter() + rbac.permission_time
-            
-            # verify if the client is valid business partner
-            if(rbac.check_business_partner(client_name, actor[0]['client_name'])==False):
-                print('you are not business partner with '+actor[0]['client_name']+' so you can not read data.')
-                return
+            start_time = time.perf_counter() + accessControlOntologyManager.permission_time
             
             req_time = time.perf_counter()
             
@@ -633,9 +620,9 @@ def read_data():
 def delete_data(block):
     for i in range(test_run):
         CSVLogger.timeObj = {}
-        # simulate rbac time again 
-        rbac.verify_permission(client_role, 'delete', 'blockchain') # - required for test run only
-        CSVLogger.timeObj['RbacTime'] = rbac.permission_time
+        # simulate verification time again 
+        accessControlOntologyManager.verify_permission('delete') # - required for test run only
+        CSVLogger.timeObj['RbacTime'] = accessControlOntologyManager.permission_time
 
         # simulate read and decryption time again
         read_my_data() # - required for test run only
@@ -651,7 +638,7 @@ def delete_data(block):
             for prev_pointer in block['previous_pointers']:
                 dht_manager.set_value(prev_pointer, 'DELETED')
 
-        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+rbac.permission_time+CSVLogger.timeObj['EncDecTime']+CSVLogger.timeObj['BlockchainReadTime']
+        CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time) + accessControlOntologyManager.permission_time+CSVLogger.timeObj['EncDecTime']+CSVLogger.timeObj['BlockchainReadTime']
         print("\nOverall time to delete data on dht:", format(CSVLogger.timeObj['OverallTime'],'.8f'))
         
         print('Data deleted on DHT.')
@@ -785,7 +772,7 @@ def display_menu():
         if choice == '1':
             # create data
             # verify permission
-            if(rbac.verify_permission(client_role, 'write', 'blockchain')):
+            if(accessControlOntologyManager.verify_permission('post')):
                 data_input()
             else:
                 print('You are not authorized to perform this action.')
@@ -794,7 +781,7 @@ def display_menu():
 
             # read data
              # verify permission
-            if(rbac.verify_permission(client_role, 'read', 'blockchain')):
+            if(accessControlOntologyManager.verify_permission('get')):
                 read_data()
             else:
                 print('You are not authorized to perform this action.')
@@ -802,7 +789,7 @@ def display_menu():
         elif choice == '3':
             # update data
             # verify permission
-            if(rbac.verify_permission(client_role, 'update', 'blockchain')):
+            if(accessControlOntologyManager.verify_permission('put')):
                 # return all confirmed transactions after mining to the data owner/ read data for update it
                 all_data = read_my_data()
                 if len(all_data)==0:
@@ -840,7 +827,7 @@ def display_menu():
         elif choice == '4':
             # delete data
              # verify permission
-            if(rbac.verify_permission(client_role, 'delete', 'blockchain')):
+            if(accessControlOntologyManager.verify_permission('delete')):
                 # return all confirmed transactions for delete
                 all_data = read_my_data()
                 if len(all_data)==0:
@@ -908,18 +895,17 @@ def display_menu():
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8020, type=int, help='port to listen on')
-    parser.add_argument('-c', '--client', default='wood_cutting', help='Enter client name')
-    parser.add_argument('-r', '--role', default='owner', help='Enter role name')
-    parser.add_argument('-id', '--id', default='wood_cutting0-4', help='Enter role name')
+    parser.add_argument('-c', '--client', default='Alice', help='Enter client name')
+    parser.add_argument('-r', '--role', default='Woodcutter', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port
     client_name = args.client
     client_role = args.role
-    client_id = args.id
+    client_id = args.client
 
-    # authenticate client name and role using rabac manager
-    if(not rbac.authenticate(client_name, client_role)):
+    # authenticate client name and role using ontology manager
+    if(not accessControlOntologyManager.authenticate(client_name, client_role)):
         print('Not authenticated.')
         exit()
     

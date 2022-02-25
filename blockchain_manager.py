@@ -197,6 +197,9 @@ class BlockchainManager:
         if block is not None:
             previous_pointer=block['data']
 
+        # protege ontology uri to be stored in meta data
+        access_control_ontology_uri = ' https://osebje.famnit.upr.si/~michael.mrissa/ontology/AccessControl.owl'
+
         dataObj = {
             'data':pointer,
             'meta-data' : {
@@ -205,7 +208,8 @@ class BlockchainManager:
                 'data-entry-time':datetime.now().strftime("%H:%M:%S"),
                 'client-id':client_id,
                 'previous_pointer':previous_pointer,
-                'data_schema_uri': data_schema_uri
+                'data_schema_uri': data_schema_uri,
+                'access_control_ontology_uri':access_control_ontology_uri
             }
         }
         self.blockchain.add_new_transaction(dataObj)
