@@ -21,9 +21,7 @@ import re
 from datetime import datetime
 
 
-test_run = 5
-
-data_schema = None
+test_run = 1
 
 # variable to store perrs list
 peer_list = []
@@ -68,20 +66,6 @@ ring_manager = None
 
 # create flask app object
 app = Flask(__name__)
-# endpoint to return the data scehma of the current client/actor
-@app.route('/data_schema', methods=['GET'])
-def get_data_schema():
-    global client_role
-    # open JSON file/read JSON file
-    f = open('data_schema.json',)
-    # read data_schema file as an json object
-    schema = json.load(f)
-    # close file
-    f.close()
-
-    # return current actor's schema
-    return schema[client_role]
-
 # api to return public key
 # this will be called from any other client
 @app.route('/public_key', methods=['GET'])
@@ -153,47 +137,26 @@ def chain(actor=None):
             print('sign not verified.')
             return 'Sign not verified.', 500
 
-        # owner will verify if requester client id iis in my_actor_tree or not
-        if (any(c['client_id'] == requester['client_id'] for c in my_actors_tree) == False):
-            return 'Invalid Request', 500
-
         CSVLogger.timeObj['MaintainUpdateHistoryTime']=0
         # decrypt owner data
-        all_data = read_my_data()
-        filtered_data = []
+        all_resources = read_my_data()
+        
+        filtered_resources = next(resource for resource in all_resources if resource['data'] == requester['pointer'])
 
         CSVLogger.timeObj['MetadataDateQuery'] = 0
         CSVLogger.timeObj['MetadataPropertyQuery'] = 0
         CSVLogger.timeObj['MetadataRecent'] = 0
         CSVLogger.timeObj['MetadataQueryOverallTime']=0
-        if(len(all_data)>0):
-            metadata_query_overalltime = time.perf_counter()
-            # validate meta data query if requester has provided valid properties
-            metadata_query = validate_metadata_query(requester['metadata_query'])
-            filtered_data = search_metadata_query(all_data, metadata_query)
-            CSVLogger.timeObj['MetadataQueryOverallTime'] = (time.perf_counter()-metadata_query_overalltime)
         
-        # iterate all data/transactions
-        for data in filtered_data:
-            # check if requester is not current actor
-            if(len(data) > 1 and requester['client_id'] != client_id):
-                # check if requester is bussiness parter with current actor
-                if (accessControlOntologyManager.check_business_partner(requester['client_id']) and requester['client_id'] != client_id):
-                    del data['private']
-                    del data['previous_data']
-                    del data['previous_pointers']
-                    del data['data']
-                    del data['meta-data']
-                # requester is not business partner so delete all the data except public_data
-                # in this case only public data will be returned
-                else:
-                    del data['private']
-                    del data['sensitive']
-                    del data['previous_data']
-                    del data['previous_pointers']
-                    del data['data']
-                    del data['meta-data']
-                
+        # check if requester is not current actor
+        if(filtered_resources != None and requester['client_id'] != client_id):
+            # check get permissions for requester role to read the data
+            requester_resources = accessControlOntologyManager.get_role_resources(requester['role'], 'get')
+            # iterate all data properties
+            for resource in list(filtered_resources):
+                # delete resource if requester is not allowed to read or access it 
+                if resource not in requester_resources:
+                    del filtered_resources[resource]
 
         if len(peer) > 0:
             # extract requester's public key from peer list
@@ -204,7 +167,7 @@ def chain(actor=None):
             # encrypted_data = encryptionManager.encrypt(all_data, requester_public_key)
             
             # encrypt data with symmetric key
-            encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(filtered_data)
+            encrypted_data, symmetric_key = encryptionManager.symetric_encrypt(filtered_resources)
             # encrypt symmetric key with requester's public key
             encrypted_key = encryptionManager.encrypt(symmetric_key, requester_public_key)
             # create data object with symmetric data and symmetric key
@@ -233,6 +196,7 @@ def chain(actor=None):
             return "The block was discarded by the node", 400
 
         return "Block added to the chain", 201
+
 # algo to validate query parameters (schema_property, date, date_citeria)
 def validate_metadata_query(query):
     try:
@@ -246,21 +210,13 @@ def validate_metadata_query(query):
     if query['date_criteria'] not in ('before','after','exact'):
         query['date'] = ''
         query['date_criteria'] = ''
-    
-    
-    data_schema = get_data_schema()
-    # validate schema property if it is available in data_schema file
-    if(query['property'] not in data_schema['private'] and
-        query['property'] not in data_schema['sensitive'] and 
-        query['property'] not in data_schema['public']):
-        query['property']=''
-    
+
     return query
 
 # apply query on all data and filter data based on the query paramertes
 def search_metadata_query(all_data, query):
     filtered_data = []
-    # conditions for date and date criteria
+    # conditions for date and time criteria
     if (query['date'] != ''):
         metadata_date_query_time=time.perf_counter()
         for data in all_data:
@@ -274,33 +230,14 @@ def search_metadata_query(all_data, query):
                 filtered_data.append(data)
             elif(query['date_criteria'] == 'after' and data_entry_datetime > query['date']):
                 filtered_data.append(data)
-            
         CSVLogger.timeObj['MetadataDateQuery'] = (time.perf_counter()-metadata_date_query_time)
-        
     else:
         metadata_recent_query_time = time.perf_counter()
         # user have not provided any date so return last data (recent)
         filtered_data.append(all_data[-1])
         CSVLogger.timeObj['MetadataRecent'] = (time.perf_counter()-metadata_recent_query_time)
 
-    # condition for schema property
-    prop = query['property'] 
-    if(prop !=''):
-        metadata_property_query_time = time.perf_counter()
-        filtered_properties=[]
-        for data in filtered_data:
-            if (prop in data['private']):
-                filtered_properties.append(data['private'][prop])
-            elif (prop in data['sensitive']):
-                filtered_properties.append(data['sensitive'][prop])
-            elif (prop in data['public']):
-                filtered_properties.append(data['public'][prop])
-        CSVLogger.timeObj['MetadataPropertyQuery'] = (time.perf_counter()-metadata_property_query_time)
-        
-        return filtered_properties
-    else:
-        # if user has not any scema_property then return all data (sensitive and public)
-        return filtered_data
+    return filtered_data
 
 # function to connect with registry server
 def register():
@@ -309,12 +246,11 @@ def register():
         req = requests.post(registry_server+ "peers", data=json.dumps(
             {"client_address": my_endpoint, "client_name": client_name, 
             "public_key": encryptionManager.public_key, "client_id":client_id}), headers=headers)
-
         if(req.ok):
             print('Connected with registry server')
         else:
             print('Failed to connect with registry server.')
-            exit()            
+            exit()
     except:
         print('Failed to connect with registry server.')
         exit()
@@ -368,63 +304,25 @@ def initialize_components():
     
     CSVLogger.initialization_csv()
 
-# function to convert input values into json format
-# value type=int,float
-def format_key_value(input_text, value_type):
-    try:
-        # main dict object to store key value pairs
-        key_values={}
-
-        # split user input text (i.e aa:2.2,bb:44.5)
-        values = input_text.split(',')
-        # iterate all inputs
-        for value in values:
-            try:
-                # split according to key value pair
-                k, v=value.split(':')
-                
-                # strip is used to removed empty space in key or value
-                k = k.strip() 
-                v = v.strip()
-                
-                # convert value to specific type (int,float)
-                if value_type=='int':
-                    key_values[k]=int(v)
-                elif value_type=='float':
-                    key_values[k]=float(v)
-                elif value_type=='text':
-                    key_values[k]=v
-            except:
-                print('Invalid key value pair: '+value)
-    except:
-        print('Unable to process input values, please provide valid key value pairs and try again.')
-    
-    return key_values
-
 # data input function
 def data_input(block=None):
-    # call get_data_schema function to return data schema
-    data_schema = get_data_schema()
+    # call get_role_resources from ontology file to verify which actor has create/post data
+    client_resources = accessControlOntologyManager.get_role_resources(client_role, 'post')
 
-    # iterate private, public, sensitive data from data_schema
-    for privacy_level, data in data_schema.items():
-        # iterate all properties in data
-        for property, value in data.items():
-            # check if property value type is string
-            if(isinstance(value, str)):
-                # take input from user for property
-                while len(data_schema[privacy_level][property]) == 0:
-                    data_schema[privacy_level][property] = input('Enter '+property+': ')
-            
-            # check if property value type is dict object (for multiple inputs)
-            elif(isinstance(value, dict)):
-                print("Enter multiple inputs in format as -> key : value, ")
-                while len(data_schema[privacy_level][property]) == 0:
-                    # take multiple inputs (key value pairs) in comma separated format
-                    input_text = input('Enter '+property+' as key value pairs (key:value,): ')
-                    data_schema[privacy_level][property] = format_key_value(input_text, 'text')
-            
-    create_data(data_schema, block)
+    # iterate all resources that are allowed
+    for resource, value in client_resources.items():
+        # check if property value type is string
+        if(isinstance(value, str)):
+            # take input from user for resource
+            while len(client_resources[resource]) == 0:
+                # if block is not none then this is for update case 
+                # so do not update product_id and consider the same product id from block
+                if block != None and resource=='Product_Id':
+                    client_resources[resource]=block[resource]
+                else:
+                    client_resources[resource] = input('Enter '+resource+': ')
+        
+    create_data(client_resources, block)
 
 # store data method
 # pointer and meta data will be stored on blockchain
@@ -446,15 +344,10 @@ def create_data(data, block=None):
             read_my_data() # - required for test run only
             
         # verify permission post permission from ontology
-        accessControlOntologyManager.verify_permission('post') # - for test run
+        accessControlOntologyManager.verify_class_rules('post') # - for test run
         
         start_time = time.perf_counter() + accessControlOntologyManager.permission_time
 
-        #take user id from private data
-        user_id = ''
-        if 'ConsumerId_private_privacy_level' in data['private']:
-            user_id = data['private']['ConsumerId_private_privacy_level']
-        
         encrypted_data = ''
 
         # if user choose asymmetric encryption option
@@ -490,8 +383,9 @@ def create_data(data, block=None):
 
         # data schema uri of current client/actor i.e http://localhost:4565/data_schema (get_data_schema)
         data_schema_uri = my_endpoint+'/data_schema'
+        
         # store pointer and data_scema uri in the meta data on blockchain (transaction will be added to unconfirmed list)
-        blockChainManager.new_transaction(pointer, user_id, client_id, data_schema_uri, block)
+        blockChainManager.new_transaction(pointer, client_id, data['Product_Id'], data_schema_uri, block)
         
         CSVLogger.timeObj['BlockchainStorageTime'] = (time.perf_counter()-bc_start_time)
         CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)+CSVLogger.timeObj['EncDecTime']
@@ -512,116 +406,136 @@ def create_data(data, block=None):
 # read data 
 def read_data():
     # ask actor id to read data
-    actor_id = ''
-    while len(actor_id) == 0:
-        actor_id = input("Enter client id to request/read data: ")
+    product_id = ''
+    while len(product_id) == 0:
+        product_id = input("Enter product id to request/read data: ")
 
-    # find actor name by actor id
-    actor = [p for p in my_actors_tree if p['client_id'] == actor_id]
+    # variable to store all blockchain transactions
+    transactions = []
+    for block in blockChainManager.blockchain.chain:
+        transactions.extend(block.transactions)
     
+    # filter transactions by product id
+    transactions = [t for t in transactions if t['meta-data']['product-id'] == product_id]
+    
+    if len(transactions) == 0:
+        print('No data found for product id: '+product_id)
+        return
+
     # ask metadata query parameters i.e 
-    schema_property = input("Enter schema property: ")
     date = input("Enter date and time to be searched 'yyyy-mm-dd hh:mm': ")
     date_criteria=''
     if(date != ''):
         date_criteria = input("Enter date match criteria (before,after,exact): ")
     # e.g schema_propoerty such as Schedule_sensitive_privacy_level
     metadata_query = {
-        'property':schema_property,
         'date':date,
         'date_criteria':date_criteria
     }
 
-    if(len(actor) > 0):
+    metadata_query_overalltime = time.perf_counter()
+    metadata_query = validate_metadata_query(metadata_query)
+    # search metadata query with transactions
+    # this will return all transactions with matching date query
+    filtered_transactions = search_metadata_query(transactions, metadata_query)
+    CSVLogger.timeObj['MetadataQueryOverallTime'] = (time.perf_counter()-metadata_query_overalltime)
+
+    returned_data = []
+    if(len(filtered_transactions) > 0):
         for i in range(test_run):
-            CSVLogger.timeObj = {}
-            CSVLogger.timeObj['EncDecTime'] =  0
-            CSVLogger.timeObj['CreateRing'] =  0
-            CSVLogger.timeObj['DhtRead'] =  0
-            CSVLogger.timeObj['BlockchainReadTime'] =  0
-
-            # simulate verification time again 
-            accessControlOntologyManager.verify_permission('get') # - required for test run only
-            
-            # calculate start time to read data 
-            start_time = time.perf_counter() + accessControlOntologyManager.permission_time
-            
-            req_time = time.perf_counter()
-            
-            try:
-                print('sending data read request to client id: '+actor[0]['client_id'])
-                headers = {'Content-Type': "application/json"}
-
-               # create query to read data
-                data = json.dumps({'role': client_role, 'client_id':client_id, 'metadata_query':metadata_query})
-                # Create signature with requester's private key
-                sign = encryptionManager.create_sign(data, encryptionManager.private_key)
-
-                # send data request with signature to data owner by calling /chain api+actor name
-                response = requests.post(actor[0]['client_address']+ "/chain/"+actor[0]['client_name'], 
-                    data=json.dumps({'data': data, 'sign':sign}), headers=headers)
+            # iterate each transaction that is searched/filtered 
+            for transaction in filtered_transactions:
+                # get actor from transaction meta data
+                actor = next(p for p in my_actors_tree if p['client_id'] == transaction['meta-data']['client-id'])
                 
-                if response.ok:
-                    # response object return from actor/owner
-                    response_object = response.json()
+                # check business partner rule
+                if (accessControlOntologyManager.check_business_partner(transaction['meta-data']['client-id'])):
+                
+                    CSVLogger.timeObj = {}
+                    CSVLogger.timeObj['EncDecTime'] =  0
+                    CSVLogger.timeObj['CreateRing'] =  0
+                    CSVLogger.timeObj['DhtRead'] =  0
+                    CSVLogger.timeObj['BlockchainReadTime'] =  0
+
+                    # simulate verification time again 
+                    accessControlOntologyManager.verify_class_rules('get') # - required for test run only
                     
-                    timeObj = response_object['timeObj']
+                    # calculate start time to read data 
+                    start_time = time.perf_counter() + accessControlOntologyManager.permission_time
                     
-                    CSVLogger.timeObj['EncDecTime'] =  timeObj['EncDecTime']
-                    CSVLogger.timeObj['CreateRing'] =  timeObj['CreateRing']
-                    CSVLogger.timeObj['DhtRead'] =  timeObj['DhtRead']
-                    CSVLogger.timeObj['BlockchainReadTime'] =  timeObj['BlockchainReadTime']
+                    req_time = time.perf_counter()
                     
-                    CSVLogger.timeObj['MetadataDateQuery'] = timeObj['MetadataDateQuery']
-                    CSVLogger.timeObj['MetadataPropertyQuery'] = timeObj['MetadataPropertyQuery']
-                    CSVLogger.timeObj['MetadataRecent'] = timeObj['MetadataRecent']
-                    CSVLogger.timeObj['MetadataQueryOverallTime'] = timeObj['MetadataQueryOverallTime']
-                    CSVLogger.timeObj['MaintainUpdateHistoryTime'] = timeObj['MaintainUpdateHistoryTime']
-                    
-                    # verify ring signature
-                    isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
-                    if(isVerified is True):
-                        data_obj = json.loads(response_object['data'])
-        
-                        # decrypt symmetric key with receiver's/requester private key
-                        decrypted_symmetric_key = encryptionManager.decrypt(data_obj['symmetric-key'], encryptionManager.private_key)                    
+                    try:
+                        print('sending data read request to client id: '+actor['client_id'])
+                        headers = {'Content-Type': "application/json"}
+
+                        # create query to read data
+                        data = json.dumps({'role': client_role, 'client_id':client_id, 'pointer':transaction['data']})
+                        # Create signature with requester's private key
+                        sign = encryptionManager.create_sign(data, encryptionManager.private_key)
+
+                        # send data request with signature to data owner by calling /chain api+actor name
+                        response = requests.post(actor['client_address']+ "/chain/"+actor['client_name'], 
+                            data=json.dumps({'data': data, 'sign':sign}), headers=headers)
                         
-                        print('Symmetric data decryption with symmetric key while data read request')
-                        # decrypt data by using symmetric key
-                        decrypted_data = encryptionManager.symetric_decrypt(data_obj['symmetric-data'], decrypted_symmetric_key)
-                        
-                        print(60 * "-")
-                        print('data retrieved from client id: '+actor[0]['client_id'])
-                        print(json.dumps(decrypted_data, indent=2))
-                        print()
+                        if response.ok:
+                            # response object return from actor/owner
+                            response_object = response.json()
+                            
+                            timeObj = response_object['timeObj']
+                            
+                            CSVLogger.timeObj['EncDecTime'] =  timeObj['EncDecTime']
+                            CSVLogger.timeObj['CreateRing'] =  timeObj['CreateRing']
+                            CSVLogger.timeObj['DhtRead'] =  timeObj['DhtRead']
+                            CSVLogger.timeObj['BlockchainReadTime'] =  timeObj['BlockchainReadTime']
+                            
+                            CSVLogger.timeObj['MetadataDateQuery'] = timeObj['MetadataDateQuery']
+                            CSVLogger.timeObj['MetadataPropertyQuery'] = timeObj['MetadataPropertyQuery']
+                            CSVLogger.timeObj['MetadataRecent'] = timeObj['MetadataRecent']
+                            CSVLogger.timeObj['MetadataQueryOverallTime'] = timeObj['MetadataQueryOverallTime']
+                            CSVLogger.timeObj['MaintainUpdateHistoryTime'] = timeObj['MaintainUpdateHistoryTime']
+                            
+                            # verify ring signature
+                            isVerified = ring_manager.verify(response_object['data'], response_object['sign'])
+                            if(isVerified is True):
+                                data_obj = json.loads(response_object['data'])
+                
+                                # decrypt symmetric key with receiver's/requester private key
+                                decrypted_symmetric_key = encryptionManager.decrypt(data_obj['symmetric-key'], encryptionManager.private_key)                    
+                                
+                                print('Symmetric data decryption with symmetric key while data read request')
+                                # decrypt data by using symmetric key
+                                decrypted_data = encryptionManager.symetric_decrypt(data_obj['symmetric-data'], decrypted_symmetric_key)
+                                returned_data.append(decrypted_data)               
+                                print(60 * "-")
+                        else:
+                            print(response.text)
+                            print('Failed to read data from client id: ' + actor['client_id'])
+
+                    except:
+                        print(response.text)
+                        print('Unable to read data')
+                        print(actor['client_id'] + ' peer might be unavailable.')
                     
-                else:
-                    print(response.text)
-                    print('Failed to read data from client id: ' + actor[0]['client_id'])
+                    CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
+                    print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
+                    
+                    print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
 
-            except:
-                print(response.text)
-                print('Unable to read data')
-                print(actor[0]['client_id'] + ' peer might be unavailable.')
-            
-            
-            CSVLogger.timeObj['OverallTime'] = (time.perf_counter()-start_time)
-            print("\nOverall time to read data (blockchain, data request, ring verification, decryption):", format((time.perf_counter()-start_time), '.8f'))
-            
-            print("\nData request time (time taken by owner to decrypt, create ring and return data):", format((time.perf_counter()-req_time), '.8f'))
+                    # save current run time
+                    CSVLogger.save_time()
 
-            # save current run time
-            CSVLogger.save_time()
-
-        CSVLogger.sym_read_data_csv()
+                CSVLogger.sym_read_data_csv()
+        print(json.dumps(returned_data, indent=2))
+        print()
     else:
-        print(actor_id + ' is unavailable or not valid in tree/hierarchy.')
+        print('No data found')
     
 def delete_data(block):
     for i in range(test_run):
         CSVLogger.timeObj = {}
         # simulate verification time again 
-        accessControlOntologyManager.verify_permission('delete') # - required for test run only
+        accessControlOntologyManager.verify_class_rules('delete') # - required for test run only
         CSVLogger.timeObj['RbacTime'] = accessControlOntologyManager.permission_time
 
         # simulate read and decryption time again
@@ -772,7 +686,7 @@ def display_menu():
         if choice == '1':
             # create data
             # verify permission
-            if(accessControlOntologyManager.verify_permission('post')):
+            if(accessControlOntologyManager.verify_class_rules('post') or accessControlOntologyManager.verify_individual_rules('post')):
                 data_input()
             else:
                 print('You are not authorized to perform this action.')
@@ -781,7 +695,7 @@ def display_menu():
 
             # read data
              # verify permission
-            if(accessControlOntologyManager.verify_permission('get')):
+            if(accessControlOntologyManager.verify_class_rules('get') or accessControlOntologyManager.verify_individual_rules('get')):
                 read_data()
             else:
                 print('You are not authorized to perform this action.')
@@ -789,7 +703,7 @@ def display_menu():
         elif choice == '3':
             # update data
             # verify permission
-            if(accessControlOntologyManager.verify_permission('put')):
+            if(accessControlOntologyManager.verify_class_rules('put') or accessControlOntologyManager.verify_individual_rules('put')):
                 # return all confirmed transactions after mining to the data owner/ read data for update it
                 all_data = read_my_data()
                 if len(all_data)==0:
@@ -827,7 +741,7 @@ def display_menu():
         elif choice == '4':
             # delete data
              # verify permission
-            if(accessControlOntologyManager.verify_permission('delete')):
+            if(accessControlOntologyManager.verify_class_rules('delete') or accessControlOntologyManager.verify_individual_rules('delete')):
                 # return all confirmed transactions for delete
                 all_data = read_my_data()
                 if len(all_data)==0:
@@ -896,7 +810,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=8020, type=int, help='port to listen on')
     parser.add_argument('-c', '--client', default='Alice', help='Enter client name')
-    parser.add_argument('-r', '--role', default='Woodcutter', help='Enter role name')
+    parser.add_argument('-r', '--role', default='Woodcutter1', help='Enter role name')
     
     args = parser.parse_args()
     port = args.port

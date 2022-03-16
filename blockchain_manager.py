@@ -191,19 +191,19 @@ class BlockchainManager:
         return (blockNo, self.findblock(blockNo))
 
     # function to store data (pointer and metadata) on blockchain
-    def new_transaction(self, pointer, user_id, client_id, data_schema_uri, block):
+    def new_transaction(self, pointer, client_id, product_id, data_schema_uri, block):
         previous_pointer=''
         # if block is not none then consider previous pointer from block
         if block is not None:
             previous_pointer=block['data']
 
         # protege ontology uri to be stored in meta data
-        access_control_ontology_uri = ' https://osebje.famnit.upr.si/~michael.mrissa/ontology/AccessControl.owl'
+        access_control_ontology_uri = 'https://osebje.famnit.upr.si/~michael.mrissa/ontology/AccessControl.owl'
 
         dataObj = {
             'data':pointer,
             'meta-data' : {
-                'user-id':user_id,
+                'product-id':product_id,
                 'data-entry-date':datetime.now().strftime("%Y-%m-%d"),
                 'data-entry-time':datetime.now().strftime("%H:%M:%S"),
                 'client-id':client_id,

@@ -22,6 +22,7 @@ class AccessControlOntologyManager:
         else:
             # list of actors / individuals
             self.actors = list(self.onto.Actor.instances())
+            self.roles = list(self.onto.Role.instances())
 
     # method to return role of any actor
     def get_actor_role(self, actor):
@@ -31,6 +32,32 @@ class AccessControlOntologyManager:
             return actor.hasRole[0].name
         else:
             return None
+
+    # method to return allowed parameters for any actor role
+    def get_role_resources(self, role_name, permission):
+        # find  actor (i.e Alice, Bob) by name from ontology
+        ontology_role = next(r for r in self.roles if r.name == role_name)
+        if(ontology_role != None):
+            
+            if permission == 'get':
+                parameters = list(ontology_role.hasGetPermission)
+            elif permission == 'post':
+                parameters = list(ontology_role.hasPostPermission)
+            elif permission == 'put':
+                parameters = list(ontology_role.hasPermission)
+            elif permission == 'delete':
+                parameters = list(ontology_role.hasGetPermission)
+
+            resources = {'Product_Id':''}
+            for resource in parameters:
+                resources[resource.name] = ''
+            print(role_name + ' resources for '+ permission +':')
+            print(resources)
+            return resources
+        else:
+            return {}
+
+        
 
     # this method is used to authenticate actor and his role from ontology by using hasRole property
     def authenticate(self, actor, role):
@@ -45,25 +72,42 @@ class AccessControlOntologyManager:
         else:
             return False
 
-    # this method is used to verify permission of verbs (get, post, put, delete) from ontology
-    def verify_permission(self, permission):
+    # this method is used to verify role level permission of verbs (get, post, put, delete) from ontology
+    def verify_class_rules(self, permission):
         start_time = perf_counter()
 
         result = False
-        # verify permission based on the SWRL rules depending on class level/role or actor level
         if self.current_actor is not None:
             if permission == 'get':
-                result = len(self.current_role.hasGetPermission) > 0 or len(
-                    self.current_actor.hasGetPermission) > 0
+                result = len(self.current_role.hasGetPermission) > 0
             elif permission == 'post':
-                result = len(self.current_role.hasPostPermission) > 0 or len(
-                    self.current_actor.hasPostPermission) > 0
+                result = len(self.current_role.hasPostPermission) > 0 
             elif permission == 'put':
-                result = len(self.current_role.hasPutPermission) > 0 or len(
-                    self.current_actor.hasPutPermission) > 0
+                result = len(self.current_role.hasPutPermission) > 0
             elif permission == 'delete':
-                result = len(self.current_role.hasDeletePermission) > 0 or len(
-                    self.current_actor.hasDeletePermission) > 0
+                result = len(self.current_role.hasDeletePermission) > 0
+
+        self.permission_time = (perf_counter()-start_time)
+        CSVLogger.timeObj['RbacTime'] = self.permission_time
+
+        print("\nTime to verify permission:",
+              format(self.permission_time, '.8f'))
+        return result
+
+    # this method is used to verify individual level permission of verbs (get, post, put, delete) from ontology
+    def verify_individual_rules(self, permission):
+        start_time = perf_counter()
+
+        result = False
+        if self.current_actor is not None:
+            if permission == 'get':
+                result = len(self.current_actor.hasGetPermission) > 0
+            elif permission == 'post':
+                result = len(self.current_actor.hasPostPermission) > 0
+            elif permission == 'put':
+                result = len(self.current_actor.hasPutPermission) > 0
+            elif permission == 'delete':
+                result = len(self.current_actor.hasDeletePermission) > 0
 
         self.permission_time = (perf_counter()-start_time)
         CSVLogger.timeObj['RbacTime'] = self.permission_time
@@ -85,13 +129,3 @@ class AccessControlOntologyManager:
             return len(business_partner) > 0
         else:
             return False
-
-
-# manager = AccessControlOntologyManager()
-# manager.authenticate('Alice', 'Woodcutter')
-# manager.verify_permission('get')
-
-# if(manager.check_business_partner('Bob')):
-#     print("business partners")
-# else:
-#     print("not business partners")
